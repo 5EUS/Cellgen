@@ -15,6 +15,7 @@ namespace Cellgen.Generation;
 internal sealed class CellSolver
 {
     private readonly LevelData def;
+    private readonly GenContext context;
     private readonly TemplateLibrary library;
     private readonly MacroPlan plan;
     private readonly GenRng rng;
@@ -29,12 +30,14 @@ internal sealed class CellSolver
 
     /// <summary>Initializes a new instance of the <see cref="CellSolver"/> class.</summary>
     /// <param name="def">The recipe.</param>
+    /// <param name="context">The seed, depth and policies.</param>
     /// <param name="library">What can be placed.</param>
     /// <param name="plan">The topology to realize.</param>
     /// <param name="rng">This stage's random stream.</param>
-    public CellSolver(LevelData def, TemplateLibrary library, MacroPlan plan, GenRng rng)
+    public CellSolver(LevelData def, GenContext context, TemplateLibrary library, MacroPlan plan, GenRng rng)
     {
         this.def = def;
+        this.context = context;
         this.library = library;
         this.plan = plan;
         this.rng = rng;
@@ -107,7 +110,7 @@ internal sealed class CellSolver
                 break;
             }
 
-            List<PlacedPiece> ordered = this.rng.WeightedOrderList(viable, static p => p.Variant.Weight);
+            List<PlacedPiece> ordered = this.rng.WeightedOrderList(viable, this.WeightOf);
             var frame = new Frame(ordered);
             this.Assign(frame.Take());
             stack.Push(frame);
@@ -295,8 +298,20 @@ internal sealed class CellSolver
             }
         }
 
-        return true;
+        if (!this.context.HasPolicies)
+        {
+            return true;
+        }
+
+        CellQuery query = this.QueryFor(piece);
+        return PolicyEval.AllowCell(this.context, query) && PolicyEval.CellWeight(this.context, query) > 0f;
     }
+
+    private float WeightOf(PlacedPiece piece) =>
+        this.context.HasPolicies ? piece.Variant.Weight * PolicyEval.CellWeight(this.context, this.QueryFor(piece)) : piece.Variant.Weight;
+
+    private CellQuery QueryFor(PlacedPiece piece) =>
+        new(this.def, this.context, piece.Variant.Template.Info, piece.Anchor, piece.Variant.Rotation);
 
     private bool FaceFits(PlacedPiece piece, Int3 slot, CellFace face)
     {

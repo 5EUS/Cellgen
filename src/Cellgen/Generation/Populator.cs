@@ -15,6 +15,7 @@ internal sealed class Populator
     private readonly GenRng rng;
     private readonly GenReport report;
     private readonly ulong seed;
+    private IReadOnlyList<PlannedCell> cells = [];
 
     /// <summary>Initializes a new instance of the <see cref="Populator"/> class.</summary>
     /// <param name="def">The recipe.</param>
@@ -59,9 +60,10 @@ internal sealed class Populator
     /// <param name="cells">The level's cells.</param>
     public void Populate(IReadOnlyList<PlannedCell> cells)
     {
+        this.cells = cells;
         float growth = MathF.Pow(Math.Max(1f, this.context.Encounters.BudgetGrowth), this.context.Depth);
-        this.EncounterBudget = this.def.EncounterBudget * growth;
-        this.LootBudget = this.def.LootBudget * growth;
+        this.EncounterBudget = this.def.EncounterBudget * growth * PolicyEval.EncounterBudgetScale(this.def, this.context);
+        this.LootBudget = this.def.LootBudget * growth * PolicyEval.LootBudgetScale(this.def, this.context);
 
         var required = new List<(int Cell, ZoneData Zone)>();
         var optional = new List<(int Cell, ZoneData Zone)>();
@@ -113,10 +115,27 @@ internal sealed class Populator
 
             if (propRng.Chance(spawn.Chance))
             {
-                string propId = spawn.PropIds[propRng.Next(spawn.PropIds.Count)];
+                IReadOnlyList<string> ids = this.AllowedProps(cell, spawn);
+                if (ids.Count == 0)
+                {
+                    continue;
+                }
+
+                string propId = ids[propRng.Next(ids.Count)];
                 this.Props.Add(new PlannedProp(this.Props.Count, cell, spawn, propId));
             }
         }
+    }
+
+    private IReadOnlyList<string> AllowedProps(int cell, PropSpawnData spawn)
+    {
+        if (!this.context.HasPolicies)
+        {
+            return spawn.PropIds;
+        }
+
+        PlannedCell planned = this.cells[cell];
+        return [.. spawn.PropIds.Where(id => PolicyEval.AllowProp(this.context, new PropQuery(this.def, this.context, planned, spawn, id, this.Props.Count)))];
     }
 
     private float FillZones(List<(int Cell, ZoneData Zone)> zones, float remaining, bool isOptional)
@@ -130,9 +149,25 @@ internal sealed class Populator
             float fair = remaining * weight / Math.Max(weightLeft, 0.01f);
             weightLeft -= weight;
 
-            List<EncounterEntry> fits = this.context.Encounters.Entries
-                .Where(e => this.Accepts(zone, e) && e.Cost <= remaining + 1e-4f)
-                .ToList();
+            var fits = new List<EncounterEntry>();
+            var policyWeights = new List<float>();
+            foreach (EncounterEntry e in this.context.Encounters.Entries)
+            {
+                if (!this.Accepts(zone, e) || e.Cost > remaining + 1e-4f)
+                {
+                    continue;
+                }
+
+                float policy = this.context.HasPolicies
+                    ? PolicyEval.EncounterWeight(this.context, new EncounterQuery(this.def, this.context, this.cells[cell], zone, e, remaining, fair))
+                    : 1f;
+                if (policy > 0f)
+                {
+                    fits.Add(e);
+                    policyWeights.Add(policy);
+                }
+            }
+
             if (fits.Count == 0 || zone.SpawnPoints.Count == 0)
             {
                 this.EmptyZones++;
@@ -146,7 +181,7 @@ internal sealed class Populator
 
             // Closest to the zone's fair share is likeliest, so big budgets buy
             // big encounters rather than many small ones everywhere.
-            int pick = this.rng.PickWeighted(fits.Select(e => 1f / (1f + MathF.Abs(e.Cost - fair))).ToList());
+            int pick = this.rng.PickWeighted(fits.Select((e, i) => (1f / (1f + MathF.Abs(e.Cost - fair))) * policyWeights[i]).ToList());
             EncounterEntry chosen = fits[pick];
             int handle = this.Zones.Count;
             this.Zones.Add(new PlannedZone(handle, cell, zone, chosen.Id, chosen.Cost, StableHash.Derive(this.seed, $"zone:{handle}")));
@@ -159,11 +194,6 @@ internal sealed class Populator
     private bool Accepts(ZoneData zone, EncounterEntry encounter)
     {
         if (!encounter.AllowsDepth(this.context.Depth) || !encounter.HasAnyTag(this.def.EncounterTags))
-        {
-            return false;
-        }
-
-        if (encounter.IsBoss && !this.def.EncounterTags.Contains(EncounterEntry.BossTag, StringComparer.Ordinal))
         {
             return false;
         }
@@ -216,13 +246,13 @@ internal sealed class Populator
     {
         for (int i = 0; i < Math.Max(1, spawn.Count); i++)
         {
-            List<LootEntryData> fits = this.Eligible(table, spawn).Where(e => e.Cost <= remaining + 1e-4f).ToList();
+            List<LootEntryData> fits = this.Eligible(table, spawn).Where(e => e.Cost <= remaining + 1e-4f && this.Offers(cell, spawn, e, remaining)).ToList();
             if (fits.Count == 0)
             {
                 break;
             }
 
-            LootEntryData entry = fits[Math.Max(0, this.rng.PickWeighted(fits.Select(static e => e.Weight).ToList()))];
+            LootEntryData entry = fits[Math.Max(0, this.rng.PickWeighted(fits.Select(e => this.WeightOf(cell, spawn, e, remaining)).ToList()))];
             this.Items.Add(new PlannedItem(cell, spawn, entry.ItemId, 0f));
             remaining -= entry.Cost;
         }
@@ -233,10 +263,10 @@ internal sealed class Populator
     /// <summary>Free pickups that cost no loot budget: the table's weights alone decide.</summary>
     private void RollAmmo(int cell, ItemSpawnData spawn, LootTableData table)
     {
-        List<LootEntryData> pool = this.Eligible(table, spawn).ToList();
+        List<LootEntryData> pool = this.Eligible(table, spawn).Where(e => this.Offers(cell, spawn, e, 0f)).ToList();
         for (int i = 0; i < Math.Max(1, spawn.Count) && pool.Count > 0; i++)
         {
-            LootEntryData entry = pool[Math.Max(0, this.rng.PickWeighted(pool.Select(static e => e.Weight).ToList()))];
+            LootEntryData entry = pool[Math.Max(0, this.rng.PickWeighted(pool.Select(e => this.WeightOf(cell, spawn, e, 0f)).ToList()))];
             this.Items.Add(new PlannedItem(cell, spawn, entry.ItemId, 0f));
         }
     }
@@ -244,14 +274,22 @@ internal sealed class Populator
     /// <summary>A shop's offers: distinct entries where possible, priced, outside the loot budget.</summary>
     private void StockShop(int cell, ItemSpawnData spawn, LootTableData table)
     {
-        List<LootEntryData> stock = this.Eligible(table, spawn).ToList();
+        List<LootEntryData> stock = this.Eligible(table, spawn).Where(e => this.Offers(cell, spawn, e, 0f)).ToList();
         for (int i = 0; i < Math.Max(1, spawn.Count) && stock.Count > 0; i++)
         {
-            int pick = Math.Max(0, this.rng.PickWeighted(stock.Select(static e => e.Weight).ToList()));
+            int pick = Math.Max(0, this.rng.PickWeighted(stock.Select(e => this.WeightOf(cell, spawn, e, 0f)).ToList()));
             this.Items.Add(new PlannedItem(cell, spawn, stock[pick].ItemId, stock[pick].Cost));
             stock.RemoveAt(pick);
         }
     }
+
+    private bool Offers(int cell, ItemSpawnData spawn, LootEntryData entry, float budgetLeft) =>
+        !this.context.HasPolicies || PolicyEval.LootWeight(this.context, new LootQuery(this.def, this.context, this.cells[cell], spawn, entry, budgetLeft)) > 0f;
+
+    private float WeightOf(int cell, ItemSpawnData spawn, LootEntryData entry, float budgetLeft) =>
+        this.context.HasPolicies
+            ? entry.Weight * PolicyEval.LootWeight(this.context, new LootQuery(this.def, this.context, this.cells[cell], spawn, entry, budgetLeft))
+            : entry.Weight;
 
     private IEnumerable<LootEntryData> Eligible(LootTableData table, ItemSpawnData spawn)
     {

@@ -57,12 +57,18 @@ public static class StructurePlacer
     }
 
     /// <summary>How many of a structure a level gets: rolled from its requirement, chance, unlock and count range.</summary>
+    /// <param name="level">The recipe.</param>
     /// <param name="def">The structure.</param>
     /// <param name="rng">The planner's random stream.</param>
-    /// <param name="context">Unlocks.</param>
+    /// <param name="context">Unlocks, and the policies that may rule the structure out.</param>
     /// <returns>How many to place.</returns>
-    public static int CountFor(StructureData def, GenRng rng, GenContext context)
+    public static int CountFor(LevelData level, StructureData def, GenRng rng, GenContext context)
     {
+        if (context.HasPolicies && !PolicyEval.AllowStructure(context, new StructureQuery(level, context, def)))
+        {
+            return 0;
+        }
+
         int min = Math.Max(def.Requirement == StructureRequirement.Required ? 1 : 0, def.MinCount);
         int max = Math.Max(min, def.MaxCount);
         return def.Requirement switch

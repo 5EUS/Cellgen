@@ -66,7 +66,7 @@ public static class LevelGenerator
         }
 
         GenRng cellsRng = GenRng.ForStage(seed, "cells");
-        List<PlacedPiece>? pieces = new CellSolver(def, library, macro, cellsRng).Solve(out failure);
+        List<PlacedPiece>? pieces = new CellSolver(def, context, library, macro, cellsRng).Solve(out failure);
 
         if (pieces is null)
         {
@@ -83,7 +83,7 @@ public static class LevelGenerator
         var populator = new Populator(def, context, seed, populateRng, report);
         populator.Populate(cells);
 
-        return new LevelPlan
+        var plan = new LevelPlan
         {
             Def = def,
             Seed = context.Seed,
@@ -102,6 +102,14 @@ public static class LevelGenerator
             LootBudget = populator.LootBudget,
             LootSpent = populator.LootSpent,
         };
+
+        if (context.HasPolicies && PolicyEval.RejectPlan(context, plan) is { } reason)
+        {
+            failure = $"a policy rejected the plan: {reason}";
+            return null;
+        }
+
+        return plan;
     }
 
     private static MacroPlan? PlanMacro(LevelData def, GenContext context, TemplateLibrary library, GenRng rng, GenReport report, out string failure)

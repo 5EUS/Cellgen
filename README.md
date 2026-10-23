@@ -78,6 +78,41 @@ and comparing `LevelPlan.Fingerprint()`, as `tests/Cellgen.Tests/CustomLayoutTes
 The planner API is **experimental** until a planner written outside this
 repository has used it.
 
+## Policies: rules without replacing anything
+
+Cellgen keeps the mechanism (the weighted draw, the budgets, the solver). A
+host or a mod layers *policy* over it with an `IGenerationPolicy`, listed in
+`GenContext.Policies`. Every member has a do-nothing default, so implement only
+what you need:
+
+| Hook | Decides |
+|---|---|
+| `AllowCell` / `CellWeight` | whether the solver may place a cell here, and how much more or less likely it is |
+| `AllowEncounter` / `EncounterWeight` | whether a spawn zone may be given an encounter, and how likely |
+| `AllowLoot` / `LootWeight` | whether an item spawn may roll an entry, and how likely |
+| `AllowProp` | whether a prop spawn may place a prop |
+| `AllowStructure` | whether a structure is placed in this level at all |
+| `EncounterBudgetScale` / `LootBudgetScale` | a multiplier on the depth-scaled budgets |
+| `RejectPlan` | a last look at the finished plan; refusing it retries on a derived seed |
+
+```csharp
+sealed class NoBossesBeforeDepth3 : IGenerationPolicy
+{
+    public bool AllowEncounter(in EncounterQuery q) =>
+        q.Context.Depth >= 3 || !q.Encounter.Tags.Contains("boss");
+}
+
+var context = new GenContext { Seed = 42, Policies = [new NoBossesBeforeDepth3()] };
+```
+
+With several policies a veto from any one stands, weights multiply, and a
+weight of zero or less removes the candidate. Policies are handed data and give
+data back; they are never given a random stream. With none installed the output
+is exactly what it is without the feature, and a policy that is a pure function
+of its query keeps generation deterministic. Cell answers may be cached by the
+solver, so they must depend on the query alone. The tests in
+`tests/Cellgen.Tests/PolicyTests.cs` show each hook.
+
 ## Other host seams
 
 - `ILootCatalog` — where a loot table's pool finds its entries.

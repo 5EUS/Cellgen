@@ -8,15 +8,6 @@ namespace Cellgen.Generation;
 /// <param name="MaxDepth">The last; -1 for no limit.</param>
 public sealed record EncounterEntry(string Id, float Cost, IReadOnlyList<string> Tags, int MinDepth, int MaxDepth)
 {
-    /// <summary>
-    /// The reserved tag of a boss encounter: it is drawn only by a level whose
-    /// <c>EncounterTags</c> name it, so a boss never turns up in an ordinary level.
-    /// </summary>
-    public const string BossTag = "boss";
-
-    /// <summary>Gets a value indicating whether the encounter carries <see cref="BossTag"/>.</summary>
-    public bool IsBoss => this.Tags.Contains(BossTag, StringComparer.Ordinal);
-
     /// <summary>Gets whether the encounter may appear at a depth.</summary>
     /// <param name="depth">The run depth.</param>
     /// <returns>True when within range.</returns>

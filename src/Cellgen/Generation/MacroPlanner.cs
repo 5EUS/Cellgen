@@ -275,7 +275,7 @@ internal sealed class MacroPlanner
 
             if (!this.wanted.TryGetValue(structure, out int count))
             {
-                count = StructurePlacer.CountFor(structure, this.rng, this.context);
+                count = StructurePlacer.CountFor(this.def, structure, this.rng, this.context);
                 this.wanted[structure] = count;
             }
 

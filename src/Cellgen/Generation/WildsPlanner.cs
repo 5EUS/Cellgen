@@ -112,7 +112,7 @@ internal sealed class WildsPlanner
                 continue;
             }
 
-            int wanted = StructurePlacer.CountFor(structure, this.rng, this.context);
+            int wanted = StructurePlacer.CountFor(this.def, structure, this.rng, this.context);
             int placed = 0;
             while (placed < wanted && StructurePlacer.Place(structure, $"structures[{i}]", this.plan, area, this.rng, this.report))
             {

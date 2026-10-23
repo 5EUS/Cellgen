@@ -18,8 +18,14 @@ public sealed class GenContext
     /// <summary>Gets the layout planners recipes can name. Defaults to the built-in layouts; add a host's own with <see cref="LayoutRegistry.CreateBuiltin"/>.</summary>
     public LayoutRegistry Layouts { get; init; } = LayoutRegistry.Builtin;
 
+    /// <summary>Gets the policies layered over generation, in order. Empty by default: see <see cref="IGenerationPolicy"/>.</summary>
+    public IReadOnlyList<IGenerationPolicy> Policies { get; init; } = [];
+
     /// <summary>Gets where loot tables find the entries of the pools they draw from.</summary>
     public ILootCatalog Loot { get; init; } = ILootCatalog.Empty;
+
+    /// <summary>Gets a value indicating whether any policy is installed. Hot paths skip building queries when none is.</summary>
+    internal bool HasPolicies => this.Policies.Count > 0;
 
     /// <summary>Gets a copy of this context for another seed and depth, keeping every catalog, registry and unlock.</summary>
     /// <param name="seed">The new seed.</param>
@@ -33,5 +39,6 @@ public sealed class GenContext
         Encounters = this.Encounters,
         Layouts = this.Layouts,
         Loot = this.Loot,
+        Policies = this.Policies,
     };
 }
