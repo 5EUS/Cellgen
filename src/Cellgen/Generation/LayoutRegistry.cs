@@ -39,6 +39,20 @@ public sealed class LayoutRegistry
         }
     }
 
+    /// <summary>Removes a planner, such as one that came from a script that has been reloaded.</summary>
+    /// <param name="id">The planner's id.</param>
+    /// <returns>True when there was one.</returns>
+    /// <exception cref="InvalidOperationException">The registry is frozen.</exception>
+    public bool Unregister(string id)
+    {
+        if (this.frozen)
+        {
+            throw new InvalidOperationException("This registry is shared and read-only; use LayoutRegistry.CreateBuiltin() for one you can change.");
+        }
+
+        return this.planners.Remove(id);
+    }
+
     /// <summary>Finds a planner.</summary>
     /// <param name="id">The id a recipe names.</param>
     /// <returns>The planner, or null when none has that id.</returns>

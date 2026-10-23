@@ -80,6 +80,11 @@ public sealed class CustomLayoutTests
         mine.Register(new LinePlanner());
         Assert.Equal([BuiltinLayouts.Corridors, LineId, BuiltinLayouts.Wilds], mine.Ids);
         Assert.Throws<InvalidOperationException>(() => mine.Register(new LinePlanner()));
+
+        Assert.True(mine.Unregister(LineId));
+        Assert.False(mine.Unregister(LineId));
+        mine.Register(new LinePlanner());
+        Assert.Throws<InvalidOperationException>(() => LayoutRegistry.Builtin.Unregister(BuiltinLayouts.Corridors));
     }
 
     private static GenContext Context(ulong seed)
@@ -100,25 +105,9 @@ public sealed class CustomLayoutTests
             Id = "line_test",
             LayoutId = layoutId,
             LayoutSettings = new LayoutSettings(new Dictionary<string, object>(StringComparer.Ordinal) { ["min_length"] = 3, ["max_length"] = 6 }),
-            CellSets = [new CellSetData { Id = "set", Cells = [Cell("start.tscn", path, east: true, west: false, "start"), Cell("mid.tscn", path, east: true, west: true), Cell("end.tscn", path, east: false, west: true, "exit")] }],
+            CellSets = [new CellSetData { Id = "set", Cells = [TestCells.OneSlot("start.tscn", path, east: true, west: false, spawns: false, "start"), TestCells.OneSlot("mid.tscn", path, east: true, west: true, spawns: false), TestCells.OneSlot("end.tscn", path, east: false, west: true, spawns: false, "exit")] }],
             MaxAttempts = 4,
         };
-    }
-
-    private static CellData Cell(string scene, SocketData socket, bool east, bool west, params string[] tags)
-    {
-        var sockets = new List<SocketEntryData>();
-        if (east)
-        {
-            sockets.Add(new SocketEntryData { Slot = Int3.Zero, Face = CellFace.East, Socket = socket });
-        }
-
-        if (west)
-        {
-            sockets.Add(new SocketEntryData { Slot = Int3.Zero, Face = CellFace.West, Socket = socket });
-        }
-
-        return new CellData { ScenePath = scene, Tags = tags, Sockets = sockets, AllowedRotations = 1 };
     }
 
     /// <summary>A straight line of slots along X, of a length rolled from the recipe's settings.</summary>

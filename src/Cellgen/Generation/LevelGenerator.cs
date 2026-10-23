@@ -22,26 +22,9 @@ public static class LevelGenerator
 
     private static GenResult GenerateWith(LevelData def, GenContext context, GenReport report, bool allowFallback)
     {
-        TemplateLibrary library = TemplateLibrary.Build(def, context.Depth, report);
-        if (context.Layouts.Find(def.LayoutId) is null)
+        if (TryRecipe(def, context, report) is { } generated)
         {
-            report.Error("layout_id", $"no layout planner '{def.LayoutId}' is registered (known: {string.Join(", ", context.Layouts.Ids)})");
-        }
-
-        int attempts = Math.Max(1, def.MaxAttempts);
-        if (report.ErrorCount == 0)
-        {
-            for (int attempt = 0; attempt < attempts; attempt++)
-            {
-                report.Attempts++;
-                ulong seed = (attempt == 0) ? context.Seed : StableHash.Derive(context.Seed, $"attempt:{attempt}");
-                if (TryAttempt(def, context, library, seed, report, out string failure) is { } plan)
-                {
-                    return new GenResult(plan, report);
-                }
-
-                report.AttemptFailed(attempt, failure);
-            }
+            return generated;
         }
 
         if (allowFallback && def.Fallback is { } fallback && fallback != def)
@@ -53,6 +36,63 @@ public static class LevelGenerator
 
         report.Error("level", $"'{def.Id}' produced no valid level in {report.Attempts} attempt(s)");
         return new GenResult(null, report);
+    }
+
+    /// <summary>Runs a recipe's attempts under the policies its sources make, which end with it.</summary>
+    private static GenResult? TryRecipe(LevelData def, GenContext context, GenReport report)
+    {
+        int errorsBefore = report.ErrorCount;
+        List<PolicyScope> began = BeginSources(def, context, report);
+        try
+        {
+            GenContext effective = (began.Count == 0) ? context : context.WithPolicies([.. context.Policies, .. began.SelectMany(static s => s.Policies)]);
+            TemplateLibrary library = TemplateLibrary.Build(def, effective.Depth, report);
+            if (effective.Layouts.Find(def.LayoutId) is null)
+            {
+                report.Error("layout_id", $"no layout planner '{def.LayoutId}' is registered (known: {string.Join(", ", effective.Layouts.Ids)})");
+            }
+
+            int attempts = Math.Max(1, def.MaxAttempts);
+            if (report.ErrorCount > errorsBefore)
+            {
+                return null;
+            }
+
+            for (int attempt = 0; attempt < attempts; attempt++)
+            {
+                report.Attempts++;
+                ulong seed = (attempt == 0) ? effective.Seed : StableHash.Derive(effective.Seed, $"attempt:{attempt}");
+                if (TryAttempt(def, effective, library, seed, report, out string failure) is { } plan)
+                {
+                    return new GenResult(plan, report);
+                }
+
+                report.AttemptFailed(attempt, failure);
+            }
+
+            return null;
+        }
+        finally
+        {
+            foreach (PolicyScope scope in began)
+            {
+                scope.End();
+            }
+        }
+    }
+
+    private static List<PolicyScope> BeginSources(LevelData def, GenContext context, GenReport report)
+    {
+        var began = new List<PolicyScope>(context.PolicySources.Count);
+        foreach (IGenerationPolicySource source in context.PolicySources)
+        {
+            if (source.Begin(def, context, report) is { } scope)
+            {
+                began.Add(scope);
+            }
+        }
+
+        return began;
     }
 
     private static LevelPlan? TryAttempt(LevelData def, GenContext context, TemplateLibrary library, ulong seed, GenReport report, out string failure)

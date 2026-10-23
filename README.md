@@ -113,12 +113,77 @@ of its query keeps generation deterministic. Cell answers may be cached by the
 solver, so they must depend on the query alone. The tests in
 `tests/Cellgen.Tests/PolicyTests.cs` show each hook.
 
+## Rules: policies as data
+
+Most policy is "forbid these, favour those, scale the budgets", and that needs no code.
+A `RuleSet` says it as data, `RulePolicy` applies it natively (a lookup per candidate), and
+the JSON form is a contract anything can write: a data file, an editor, or a script in
+whatever language the host embeds. Cellgen itself runs no scripts.
+
+```json
+{ "version": 1,
+  "rules": [
+    { "target": "encounter", "match": { "tag": "boss", "max_depth": 2 }, "allow": false },
+    { "target": "cell", "match": { "tags_any": ["trench"], "level": "frontline_01" }, "weight": 2.5 },
+    { "target": "loot", "match": { "id_prefix": "mymod:" }, "weight": 0 }
+  ],
+  "budgets": { "encounter": 0.5, "loot": 2 } }
+```
+
+Targets are `cell`, `encounter`, `loot`, `prop` and `structure`. A match is any of `id`,
+`ids`, `id_prefix` (one only), `tag`, `tags_any`, `tags_all`, `min_depth`, `max_depth`,
+`level` (the recipe's id) and `unlock`; every field set must hold. Every matching rule
+applies: any `"allow": false` stands, weights multiply. Depth and unlock conditions are
+resolved once when the generation starts. `RuleSetReader.Parse` never throws: a malformed
+document or an unknown key is an error and the set is rejected; a bad rule (unknown target,
+two id forms, nothing to do) is dropped with a warning and the rest apply; weights are
+clamped to 0..1000 and budget scales to 0.1..10.
+
+```csharp
+var rules = RuleSetReader.Parse(json);                 // diagnostics in rules.Diagnostics
+var context = new GenContext { Seed = 42, PolicySources = [new RulePolicySource(rules.Set!)] };
+```
+
+## Layouts from data
+
+A layout does not have to be C#. `DescribedLayoutPlanner(id, describe)` takes any function that
+returns a **plan description** as JSON (a script, a data file, a service) and builds the plan from
+it, after checking everything natively: bounds against the recipe's grid and layers, no duplicate
+slots, a connected path from a `start` to an `exit`, links between neighbours, tags and sockets on
+slots that exist, structures by index with a region to place them in. A bad description fails the
+attempt with every problem named by path; it never corrupts one.
+
+```json
+{ "version": 1,
+  "slots": [ { "at": [0,0,0], "role": "start" }, { "at": [1,0,0], "role": "path" }, { "at": [2,0,0], "role": "exit" } ],
+  "path": [ [0,0,0], [1,0,0], [2,0,0] ],
+  "links": [], "require_tag": [], "require_socket": [],
+  "structures": [ { "index": 1, "count": 1, "region": { "usable": { "x": [1,6], "z": [3,5] } } } ] }
+```
+
+Consecutive path slots are always linked. A structure listed here is placed by Cellgen itself
+(the search is native), inside its region, with the attempt's random stream; a recipe's
+`required` structure that the description does not place fails the attempt.
+`Requests.Layout(request, rngSeed)` is what a layout script is told: the grid, layers, tags,
+structures and settings; `Requests.Generation` is the smaller request for rules; `Requests.Plan`
+summarises a finished plan for a script that may refuse it. Seeds are decimal strings.
+
+## Policy sources and facts
+
+`GenContext.Policies` holds policies shared by every generation. A host that needs one made
+**per generation** (a compiled rule set, a script session) adds an `IGenerationPolicySource`
+to `GenContext.PolicySources`: it is asked once per recipe attempted, the fallback recipe
+asks again, and the `PolicyScope` it returns runs its cleanup when the generation ends.
+`RuleSetReader.ParseMany` merges the rule documents several scripts return into one set.
+`GenContext.Facts` carries whatever the host knows about the run (preset, campaign); policies
+and sources may read it and Cellgen never does.
+
 ## Other host seams
 
 - `ILootCatalog` — where a loot table's pool finds its entries.
 - `EncounterCatalog` — the encounters zones can be given (ids, costs, tags, depths).
-- `GenRng` — PCG32, bit-identical to Godot's `RandomNumberGenerator`
-  (`tests/Cellgen.Tests/Data/gen_rng_vectors.txt` records the sequences).
+- `GenRng` — PCG32, bit-identical to Godot's `RandomNumberGenerator`; specified in
+  [docs/rng.md](docs/rng.md) with test vectors in `spec/`, for hosts and ports in other languages.
 
 ## Building
 

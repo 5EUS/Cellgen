@@ -6,7 +6,7 @@ using Xunit;
 
 namespace Cellgen.Tests;
 
-/// <summary>Checks <see cref="GenRng"/> against sequences recorded from Godot's <c>RandomNumberGenerator</c> (<c>tools/rng_vectors.gd</c> in Trenching).</summary>
+/// <summary>Checks <see cref="GenRng"/> against sequences recorded from Godot's <c>RandomNumberGenerator</c> (<c>tools/rng_vectors.gd</c> in Trenching, stored in <c>spec/rng_vectors.txt</c>).</summary>
 public sealed class GenRngTests
 {
     /// <summary>Every recorded raw value, range and float matches Godot's.</summary>
@@ -22,7 +22,7 @@ public sealed class GenRngTests
     public void MatchesGodotSequences(string seedText)
     {
         ulong seed = unchecked((ulong)long.Parse(seedText, CultureInfo.InvariantCulture));
-        string[] lines = [.. File.ReadAllLines(Path.Combine(AppContext.BaseDirectory, "Data", "gen_rng_vectors.txt")).Where(l => l.StartsWith(seedText + "|", StringComparison.Ordinal))];
+        string[] lines = [.. File.ReadAllLines(Path.Combine(AppContext.BaseDirectory, "Spec", "rng_vectors.txt")).Where(l => l.StartsWith(seedText + "|", StringComparison.Ordinal))];
         Assert.NotEmpty(lines);
 
         GenRng rng = new(seed);

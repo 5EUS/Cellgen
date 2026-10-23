@@ -18,6 +18,9 @@ public sealed class LayoutSettings
     /// <summary>Gets settings with no keys.</summary>
     public static LayoutSettings Empty { get; } = new(new Dictionary<string, object>(StringComparer.Ordinal));
 
+    /// <summary>Gets every setting, for writing out to a host.</summary>
+    internal IReadOnlyDictionary<string, object> Values => this.values;
+
     /// <summary>Gets a number.</summary>
     /// <param name="key">The key.</param>
     /// <param name="fallback">Returned when the key is missing or not a number.</param>

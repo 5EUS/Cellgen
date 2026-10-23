@@ -3,6 +3,8 @@ namespace Cellgen.Generation;
 /// <summary>Everything a level depends on besides its recipe.</summary>
 public sealed class GenContext
 {
+    private static readonly Dictionary<string, object> NoFacts = new(StringComparer.Ordinal);
+
     /// <summary>Gets the level's seed.</summary>
     public ulong Seed { get; init; }
 
@@ -20,6 +22,12 @@ public sealed class GenContext
 
     /// <summary>Gets the policies layered over generation, in order. Empty by default: see <see cref="IGenerationPolicy"/>.</summary>
     public IReadOnlyList<IGenerationPolicy> Policies { get; init; } = [];
+
+    /// <summary>Gets the sources that make a policy for each generation; see <see cref="IGenerationPolicySource"/>.</summary>
+    public IReadOnlyList<IGenerationPolicySource> PolicySources { get; init; } = [];
+
+    /// <summary>Gets what the host knows about the run that a recipe cannot: preset, campaign, anything. Policies and scripts may read it; Cellgen never does.</summary>
+    public IReadOnlyDictionary<string, object> Facts { get; init; } = NoFacts;
 
     /// <summary>Gets where loot tables find the entries of the pools they draw from.</summary>
     public ILootCatalog Loot { get; init; } = ILootCatalog.Empty;
@@ -40,5 +48,23 @@ public sealed class GenContext
         Layouts = this.Layouts,
         Loot = this.Loot,
         Policies = this.Policies,
+        PolicySources = this.PolicySources,
+        Facts = this.Facts,
+    };
+
+    /// <summary>Gets a copy of this context with a different set of policies, as the generator runs a recipe under the ones its sources made.</summary>
+    /// <param name="policies">The policies.</param>
+    /// <returns>The copy.</returns>
+    internal GenContext WithPolicies(IReadOnlyList<IGenerationPolicy> policies) => new()
+    {
+        Seed = this.Seed,
+        Depth = this.Depth,
+        UnlockFlags = this.UnlockFlags,
+        Encounters = this.Encounters,
+        Layouts = this.Layouts,
+        Loot = this.Loot,
+        Policies = policies,
+        PolicySources = this.PolicySources,
+        Facts = this.Facts,
     };
 }
