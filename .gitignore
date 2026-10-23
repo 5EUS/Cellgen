@@ -1,0 +1,18 @@
+# .NET
+[Bb]in/
+[Oo]bj/
+artifacts/
+*.user
+*.suo
+.vs/
+
+# Tooling
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
+.DS_Store
+
+# Local state that must never be committed
+.env
+*.local.*

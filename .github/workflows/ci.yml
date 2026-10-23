@@ -1,0 +1,65 @@
+name: Continuous integration
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+  DOTNET_NOLOGO: "1"
+  NUGET_XMLDOC_MODE: skip
+
+jobs:
+  # A library has nothing to publish; the AOT and trim analyzers run in the build.
+  # Generation must give the same plans on every OS, so the golden-fingerprint
+  # tests run on all three.
+  dotnet:
+    name: .NET ${{ matrix.runner }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - name: Restore (locked)
+        run: dotnet restore --locked-mode
+      - name: Verify formatting
+        run: dotnet format whitespace --no-restore --verify-no-changes
+      - name: Build
+        run: dotnet build -c Release --no-restore
+      - name: Test
+        run: dotnet test -c Release --no-build
+      - name: Pack
+        run: dotnet pack src/Cellgen/Cellgen.csproj -c Release --no-build -o artifacts
+      - name: Vulnerable packages
+        run: dotnet list package --vulnerable --include-transitive
+
+  # Token-based copy/paste detection. Kept separate from the build matrix: it only
+  # needs the sources, so one Linux runner is enough.
+  duplicates:
+    name: Duplicate code (CPD)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - name: Install PMD
+        env:
+          PMD_VERSION: "7.7.0"
+        run: |
+          curl -fsSL -o pmd.zip "https://github.com/pmd/pmd/releases/download/pmd_releases%2F${PMD_VERSION}/pmd-dist-${PMD_VERSION}-bin.zip"
+          unzip -q pmd.zip
+          echo "$PWD/pmd-bin-${PMD_VERSION}/bin" >> "$GITHUB_PATH"
+      - name: Detect duplicates
+        run: sh scripts/development/cpd.sh

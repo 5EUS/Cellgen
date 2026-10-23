@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- A library: the NativeAOT/trim analyzers stay on through IsAotCompatible in Directory.Build.props. -->
+  <PropertyGroup>
+    <PackageId>Cellgen</PackageId>
+    <Description>Deterministic, engine-agnostic procedural level generation from hand-authored cells on a slot grid.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="$(AssemblyName).Tests" />
+  </ItemGroup>
+</Project>
