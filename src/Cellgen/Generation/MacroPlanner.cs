@@ -63,23 +63,6 @@ internal sealed class MacroPlanner
         return this.RequiredStructuresPlaced(out failure) ? this.plan : null;
     }
 
-    /// <summary>How many of a structure a level gets: rolled from its requirement, chance, unlock and count range.</summary>
-    /// <param name="def">The structure.</param>
-    /// <param name="rng">The planner's random stream.</param>
-    /// <param name="context">Unlocks.</param>
-    /// <returns>How many to place.</returns>
-    internal static int StructureCount(StructureData def, GenRng rng, GenContext context)
-    {
-        int min = Math.Max(def.Requirement == StructureRequirement.Required ? 1 : 0, def.MinCount);
-        int max = Math.Max(min, def.MaxCount);
-        return def.Requirement switch
-        {
-            StructureRequirement.Required => rng.Range(min, max),
-            StructureRequirement.Unlockable when !context.UnlockFlags.Contains(def.UnlockFlag, StringComparer.Ordinal) => 0,
-            _ => rng.Chance(def.Chance) ? rng.Range(min, max) : 0,
-        };
-    }
-
     private bool InBounds(Int3 slot) =>
         slot.X >= 0 && slot.Z >= 0 && slot.X < this.def.GridSize.X && slot.Z < this.def.GridSize.Y && this.layers.Contains(slot.Y);
 
@@ -292,7 +275,7 @@ internal sealed class MacroPlanner
 
             if (!this.wanted.TryGetValue(structure, out int count))
             {
-                count = StructureCount(structure, this.rng, this.context);
+                count = StructurePlacer.CountFor(structure, this.rng, this.context);
                 this.wanted[structure] = count;
             }
 

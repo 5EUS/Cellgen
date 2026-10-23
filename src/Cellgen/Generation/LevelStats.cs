@@ -55,25 +55,16 @@ public sealed class LevelStats
 
     /// <summary>Generates seeds <c>1..count</c> at the recipe's lowest depth.</summary>
     /// <param name="def">The recipe.</param>
-    /// <param name="catalog">The encounters.</param>
+    /// <param name="template">A context carrying the catalogs, layouts, loot and unlocks to generate with; its seed and depth are replaced.</param>
     /// <param name="count">How many seeds.</param>
     /// <param name="depth">The depth; null for the recipe's lowest.</param>
-    /// <param name="unlocks">Unlock flags, for unlockable structures.</param>
-    /// <param name="loot">Where loot tables find their pools; null for none.</param>
     /// <returns>The statistics.</returns>
-    public static LevelStats Sweep(LevelData def, EncounterCatalog catalog, int count, int? depth = null, IReadOnlySet<string>? unlocks = null, ILootCatalog? loot = null)
+    public static LevelStats Sweep(LevelData def, GenContext template, int count, int? depth = null)
     {
         var stats = new LevelStats();
         for (int i = 1; i <= count; i++)
         {
-            var context = new GenContext
-            {
-                Seed = (ulong)i,
-                Depth = depth ?? Math.Max(0, def.MinDepth),
-                Encounters = catalog,
-                UnlockFlags = unlocks ?? new HashSet<string>(StringComparer.Ordinal),
-                Loot = loot ?? ILootCatalog.Empty,
-            };
+            GenContext context = template.With((ulong)i, depth ?? Math.Max(0, def.MinDepth));
             GenResult result = LevelGenerator.Generate(def, context);
             stats.Add(context.Seed, result);
 

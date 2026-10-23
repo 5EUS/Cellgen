@@ -15,6 +15,23 @@ public sealed class GenContext
     /// <summary>Gets the encounters zones can be given.</summary>
     public EncounterCatalog Encounters { get; init; } = EncounterCatalog.Empty;
 
+    /// <summary>Gets the layout planners recipes can name. Defaults to the built-in layouts; add a host's own with <see cref="LayoutRegistry.CreateBuiltin"/>.</summary>
+    public LayoutRegistry Layouts { get; init; } = LayoutRegistry.Builtin;
+
     /// <summary>Gets where loot tables find the entries of the pools they draw from.</summary>
     public ILootCatalog Loot { get; init; } = ILootCatalog.Empty;
+
+    /// <summary>Gets a copy of this context for another seed and depth, keeping every catalog, registry and unlock.</summary>
+    /// <param name="seed">The new seed.</param>
+    /// <param name="depth">The new run depth.</param>
+    /// <returns>The copy.</returns>
+    public GenContext With(ulong seed, int depth) => new()
+    {
+        Seed = seed,
+        Depth = depth,
+        UnlockFlags = this.UnlockFlags,
+        Encounters = this.Encounters,
+        Layouts = this.Layouts,
+        Loot = this.Loot,
+    };
 }

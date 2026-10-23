@@ -7,7 +7,7 @@ namespace Cellgen.Generation;
 /// connected. Normalized so <c>(a, b)</c> and <c>(b, a)</c> are equal.
 /// </summary>
 [StructLayout(LayoutKind.Auto)]
-internal readonly record struct SlotEdge
+public readonly record struct SlotEdge
 {
     /// <summary>Initializes a new instance of the <see cref="SlotEdge"/> struct.</summary>
     /// <param name="a">One slot.</param>

@@ -1,7 +1,7 @@
 namespace Cellgen.Generation;
 
 /// <summary>
-/// Stage A for <see cref="LevelLayout.Wilds"/>: a whole-grid wilderness
+/// Stage A for the wilds layout: a whole-grid wilderness
 /// rather than a corridor. It decides only what sockets can't: a closed
 /// border ring, structures, the start and an exit far from it, a meandering
 /// path between them that is guaranteed open, and a few two-layer landmark
@@ -104,7 +104,7 @@ internal sealed class WildsPlanner
 
     private bool PlaceStructures(out string failure)
     {
-        var area = new StructurePlacer.Area(0, this.width, this.depth, this.IsPlayable, this.IsFree);
+        var area = new PlacementArea(0, this.width, this.depth, this.IsPlayable, this.IsFree);
         for (int i = 0; i < this.def.Structures.Count; i++)
         {
             if (this.def.Structures[i] is not { } structure)
@@ -112,7 +112,7 @@ internal sealed class WildsPlanner
                 continue;
             }
 
-            int wanted = MacroPlanner.StructureCount(structure, this.rng, this.context);
+            int wanted = StructurePlacer.CountFor(structure, this.rng, this.context);
             int placed = 0;
             while (placed < wanted && StructurePlacer.Place(structure, $"structures[{i}]", this.plan, area, this.rng, this.report))
             {

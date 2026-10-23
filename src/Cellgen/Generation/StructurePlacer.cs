@@ -4,9 +4,9 @@ namespace Cellgen.Generation;
 /// Places whole-grid layouts' structures: anywhere a layout of the structure
 /// fits on free slots the caller allows, with one socket opening onto
 /// playable ground and none facing the border that can't face a wall.
-/// Shared by <see cref="FrontPlanner"/> and <see cref="WildsPlanner"/>.
+/// Shared by the whole-grid layouts: <c>WildsPlanner</c> and any planner a host registers.
 /// </summary>
-internal static class StructurePlacer
+public static class StructurePlacer
 {
     /// <summary>Tries to place one copy of a structure.</summary>
     /// <param name="def">The structure.</param>
@@ -16,7 +16,7 @@ internal static class StructurePlacer
     /// <param name="rng">The planner's random stream.</param>
     /// <param name="report">Collects diagnostics.</param>
     /// <returns>True when placed.</returns>
-    internal static bool Place(StructureData def, string path, MacroPlan plan, Area area, GenRng rng, GenReport report)
+    public static bool Place(StructureData def, string path, MacroPlan plan, PlacementArea area, GenRng rng, GenReport report)
     {
         var options = new List<(StructureLayout Layout, Int3 Anchor, SlotEdge Entrance)>();
         foreach (StructureLayout layout in StructureLayout.All(def, path, report))
@@ -56,12 +56,29 @@ internal static class StructurePlacer
         return true;
     }
 
+    /// <summary>How many of a structure a level gets: rolled from its requirement, chance, unlock and count range.</summary>
+    /// <param name="def">The structure.</param>
+    /// <param name="rng">The planner's random stream.</param>
+    /// <param name="context">Unlocks.</param>
+    /// <returns>How many to place.</returns>
+    public static int CountFor(StructureData def, GenRng rng, GenContext context)
+    {
+        int min = Math.Max(def.Requirement == StructureRequirement.Required ? 1 : 0, def.MinCount);
+        int max = Math.Max(min, def.MaxCount);
+        return def.Requirement switch
+        {
+            StructureRequirement.Required => rng.Range(min, max),
+            StructureRequirement.Unlockable when !context.UnlockFlags.Contains(def.UnlockFlag, StringComparer.Ordinal) => 0,
+            _ => rng.Chance(def.Chance) ? rng.Range(min, max) : 0,
+        };
+    }
+
     /// <summary>
     /// Where a structure at this anchor would open onto the level, or null
     /// when it can't go there: on slots the area refuses, or with a socket
     /// facing the border that can't face a wall.
     /// </summary>
-    private static SlotEdge? Entrance(StructureLayout layout, Int3 anchor, MacroPlan plan, Area area)
+    private static SlotEdge? Entrance(StructureLayout layout, Int3 anchor, MacroPlan plan, PlacementArea area)
     {
         foreach (Int3 local in layout.Slots)
         {
@@ -91,12 +108,4 @@ internal static class StructurePlacer
 
         return entrance;
     }
-
-    /// <summary>Where a structure may go in a whole-grid layout.</summary>
-    /// <param name="Layer">The layer slots are placed on.</param>
-    /// <param name="Width">Grid width, in slots.</param>
-    /// <param name="Depth">Grid depth, in slots.</param>
-    /// <param name="IsPlayable">Whether a slot is inside the border.</param>
-    /// <param name="CanUse">Whether a slot is free and allowed for structures.</param>
-    internal sealed record Area(int Layer, int Width, int Depth, Func<Int3, bool> IsPlayable, Func<Int3, bool> CanUse);
 }

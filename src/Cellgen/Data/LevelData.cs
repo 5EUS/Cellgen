@@ -24,8 +24,11 @@ public sealed class LevelData
     /// <summary>Gets the horizontal grid bounds, in slots. The level never extends past them.</summary>
     public Int2 GridSize { get; init; } = new(8, 8);
 
-    /// <summary>Gets how the slots are laid out. <see cref="LevelLayout.Front"/> uses the Front group and ignores the path and branch settings.</summary>
-    public LevelLayout Layout { get; init; } = LevelLayout.Corridors;
+    /// <summary>Gets the id of the layout planner that lays the slots out; see <see cref="Generation.BuiltinLayouts"/>, or a planner registered in <see cref="Generation.GenContext.Layouts"/>.</summary>
+    public string LayoutId { get; init; } = Generation.BuiltinLayouts.Corridors;
+
+    /// <summary>Gets the settings the chosen layout planner documents; <see cref="LayoutSettings.Empty"/> for none.</summary>
+    public LayoutSettings LayoutSettings { get; init; } = LayoutSettings.Empty;
 
     /// <summary>Gets the layers the level may use. <c>[0]</c> is a surface-only level; <c>[0, -1]</c> adds one below.</summary>
     public IReadOnlyList<int> AllowedLayers { get; init; } = [0];
@@ -54,19 +57,7 @@ public sealed class LevelData
     /// <summary>Gets the tag a cell needs to be the exit.</summary>
     public string ExitTag { get; init; } = "exit";
 
-    /// <summary>Gets how many rows deep each side's trench band is: two for the front line to bend between, the rest behind it. At least 3.</summary>
-    public int TrenchBandRows { get; init; } = 3;
-
-    /// <summary>Gets the probability the front line steps between its two rows at each column.</summary>
-    public float LineBendChance { get; init; } = 0.4f;
-
-    /// <summary>Gets how many communication trenches each side gets besides the ones to the start and exit.</summary>
-    public int CommunicationTrenches { get; init; } = 2;
-
-    /// <summary>Gets the probability a front-line slot digs a one-slot sap out into no man's land (needs 3+ rows of it).</summary>
-    public float SapChance { get; init; } = 0.15f;
-
-    /// <summary>Gets how many tall landmark slots (two layers high) a <see cref="LevelLayout.Wilds"/> level reserves. Needs layer 1 in <see cref="AllowedLayers"/>.</summary>
+    /// <summary>Gets how many tall landmark slots (two layers high) a the wilds layout level reserves. Needs layer 1 in <see cref="AllowedLayers"/>.</summary>
     public int LandmarkCount { get; init; } = 4;
 
     /// <summary>Gets the tag a cell needs to fill a landmark slot.</summary>

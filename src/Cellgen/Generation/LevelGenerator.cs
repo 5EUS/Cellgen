@@ -4,8 +4,7 @@ namespace Cellgen.Generation;
 /// Turns a recipe, a seed and a depth into a <see cref="LevelPlan"/>.
 ///
 /// Each attempt runs the three stages on its own seed - topology
-/// (<see cref="MacroPlanner"/>, or <see cref="FrontPlanner"/> or
-/// <see cref="WildsPlanner"/> for the whole-grid layouts), cells (<see cref="CellSolver"/>), budgets
+/// (an <see cref="ILayoutPlanner"/> chosen by the recipe's <c>LayoutId</c>), cells (<see cref="CellSolver"/>), budgets
 /// (<see cref="Populator"/>) - and is validated as a whole: the exit and
 /// every structure must be reachable from the start through open, matching
 /// sockets. A failed attempt retries on a derived seed; after
@@ -24,6 +23,11 @@ public static class LevelGenerator
     private static GenResult GenerateWith(LevelData def, GenContext context, GenReport report, bool allowFallback)
     {
         TemplateLibrary library = TemplateLibrary.Build(def, context.Depth, report);
+        if (context.Layouts.Find(def.LayoutId) is null)
+        {
+            report.Error("layout_id", $"no layout planner '{def.LayoutId}' is registered (known: {string.Join(", ", context.Layouts.Ids)})");
+        }
+
         int attempts = Math.Max(1, def.MaxAttempts);
         if (report.ErrorCount == 0)
         {
@@ -100,12 +104,16 @@ public static class LevelGenerator
         };
     }
 
-    private static MacroPlan? PlanMacro(LevelData def, GenContext context, TemplateLibrary library, GenRng rng, GenReport report, out string failure) => def.Layout switch
+    private static MacroPlan? PlanMacro(LevelData def, GenContext context, TemplateLibrary library, GenRng rng, GenReport report, out string failure)
     {
-        LevelLayout.Front => new FrontPlanner(def, context, rng, report).Plan(out failure),
-        LevelLayout.Wilds => new WildsPlanner(def, context, rng, report).Plan(out failure),
-        _ => new MacroPlanner(def, library, context, rng, report).Plan(out failure),
-    };
+        if (context.Layouts.Find(def.LayoutId) is not { } planner)
+        {
+            failure = $"no layout planner '{def.LayoutId}'";
+            return null;
+        }
+
+        return planner.Plan(new LayoutRequest(def, context, library, rng, report), out failure);
+    }
 
     private static List<PlannedCell> ToCells(List<PlacedPiece> pieces, MacroPlan macro, out int startCell, out int exitCell)
     {
