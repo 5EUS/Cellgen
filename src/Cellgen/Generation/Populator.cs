@@ -37,8 +37,8 @@ internal sealed class Populator
     /// <summary>Gets the items rolled.</summary>
     public List<PlannedItem> Items { get; } = [];
 
-    /// <summary>Gets the artillery pieces placed.</summary>
-    public List<PlannedArtillery> Artillery { get; } = [];
+    /// <summary>Gets the props placed.</summary>
+    public List<PlannedProp> Props { get; } = [];
 
     /// <summary>Gets how many zones got nothing.</summary>
     public int EmptyZones { get; private set; }
@@ -79,48 +79,49 @@ internal sealed class Populator
         this.EncounterSpent = this.EncounterBudget - remaining;
 
         this.RollItems(cells);
-        this.RollArtillery(cells);
+        this.RollProps(cells);
     }
 
     /// <summary>
-    /// Places up to <see cref="LevelData.ArtilleryMax"/> pieces on spawns in the front-line cells. Its own random
+    /// Places up to <see cref="LevelData.PropMax"/> pieces on prop spawns. Its own random
     /// stream, so enabling it never shifts the encounters and loot a seed already produced.
     /// </summary>
-    private void RollArtillery(IReadOnlyList<PlannedCell> cells)
+    private void RollProps(IReadOnlyList<PlannedCell> cells)
     {
-        if (this.def.ArtilleryMax <= 0)
+        if (this.def.PropMax <= 0)
         {
             return;
         }
 
-        var spawns = new List<(int Cell, ArtillerySpawnData Spawn)>();
-        foreach (PlannedCell cell in cells.Where(static c => !c.Info.HasTag(FrontPlanner.NoMansLandTag)))
+        var spawns = new List<(int Cell, PropSpawnData Spawn)>();
+        foreach (PlannedCell cell in cells.Where(c => !this.def.PropExcludedTags.Any(c.Info.HasTag)))
         {
-            spawns.AddRange(cell.Info.ArtillerySpawns
-                .Where(s => s is { PieceIds.Count: > 0 } && (s.RequiredTags.Count == 0 || s.RequiredTags.Any(cell.Info.HasTag)))
+            spawns.AddRange(cell.Info.PropSpawns
+                .Where(s => s is { PropIds.Count: > 0 } && (s.RequiredTags.Count == 0 || s.RequiredTags.Any(cell.Info.HasTag)))
                 .Select(s => (cell.Index, s)));
         }
 
-        GenRng artilleryRng = GenRng.ForStage(this.seed, "artillery");
-        artilleryRng.Shuffle(spawns);
-        foreach ((int cell, ArtillerySpawnData spawn) in spawns)
+        // The stage label predates the rename and seeds the stream: changing it reshuffles every level.
+        GenRng propRng = GenRng.ForStage(this.seed, "artillery");
+        propRng.Shuffle(spawns);
+        foreach ((int cell, PropSpawnData spawn) in spawns)
         {
-            if (this.Artillery.Count >= this.def.ArtilleryMax)
+            if (this.Props.Count >= this.def.PropMax)
             {
                 break;
             }
 
-            if (artilleryRng.Chance(spawn.Chance))
+            if (propRng.Chance(spawn.Chance))
             {
-                string pieceId = spawn.PieceIds[artilleryRng.Next(spawn.PieceIds.Count)];
-                this.Artillery.Add(new PlannedArtillery(this.Artillery.Count, cell, spawn, pieceId));
+                string propId = spawn.PropIds[propRng.Next(spawn.PropIds.Count)];
+                this.Props.Add(new PlannedProp(this.Props.Count, cell, spawn, propId));
             }
         }
     }
 
     private float FillZones(List<(int Cell, ZoneData Zone)> zones, float remaining, bool isOptional)
     {
-        List<(int Cell, ZoneData Zone)> ordered = this.rng.WeightedOrder(zones, static z => Math.Max(0.01f, z.Zone.Weight));
+        List<(int Cell, ZoneData Zone)> ordered = this.rng.WeightedOrderList(zones, static z => Math.Max(0.01f, z.Zone.Weight));
         float weightLeft = ordered.Sum(static z => Math.Max(0.01f, z.Zone.Weight));
 
         foreach ((int cell, ZoneData zone) in ordered)

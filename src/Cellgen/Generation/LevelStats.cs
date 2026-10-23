@@ -38,8 +38,8 @@ public sealed class LevelStats
     /// <summary>Gets the total empty zones across every level.</summary>
     public int EmptyZones { get; private set; }
 
-    /// <summary>Gets the total artillery pieces placed across every level.</summary>
-    public int Artillery { get; private set; }
+    /// <summary>Gets the total props placed across every level.</summary>
+    public int Props { get; private set; }
 
     /// <summary>Gets the seeds that failed, for reproducing them.</summary>
     public IReadOnlyList<ulong> FailedSeeds => this.failedSeeds;
@@ -59,8 +59,9 @@ public sealed class LevelStats
     /// <param name="count">How many seeds.</param>
     /// <param name="depth">The depth; null for the recipe's lowest.</param>
     /// <param name="unlocks">Unlock flags, for unlockable structures.</param>
+    /// <param name="loot">Where loot tables find their pools; null for none.</param>
     /// <returns>The statistics.</returns>
-    public static LevelStats Sweep(LevelData def, EncounterCatalog catalog, int count, int? depth = null, IReadOnlySet<string>? unlocks = null)
+    public static LevelStats Sweep(LevelData def, EncounterCatalog catalog, int count, int? depth = null, IReadOnlySet<string>? unlocks = null, ILootCatalog? loot = null)
     {
         var stats = new LevelStats();
         for (int i = 1; i <= count; i++)
@@ -71,6 +72,7 @@ public sealed class LevelStats
                 Depth = depth ?? Math.Max(0, def.MinDepth),
                 Encounters = catalog,
                 UnlockFlags = unlocks ?? new HashSet<string>(StringComparer.Ordinal),
+                Loot = loot ?? ILootCatalog.Empty,
             };
             GenResult result = LevelGenerator.Generate(def, context);
             stats.Add(context.Seed, result);
@@ -95,8 +97,8 @@ public sealed class LevelStats
         float attempts = (float)this.Attempts / Math.Max(1, this.Seeds);
         string runs = string.Create(CultureInfo.InvariantCulture, $"{this.Seeds} seeds, {this.Failed} failed, {this.UsedFallback} fell back, {attempts:0.0} attempts/seed");
         string shape = string.Create(CultureInfo.InvariantCulture, $"{this.Cells / ok:0.0} cells, {this.Zones / ok:0.0} zones ({this.EmptyZones / ok:0.0} empty) per level");
-        string guns = this.Artillery > 0 ? string.Create(CultureInfo.InvariantCulture, $", {this.Artillery / ok:0.0} artillery") : string.Empty;
-        return $"{runs}, {shape}{guns}";
+        string props = this.Props > 0 ? string.Create(CultureInfo.InvariantCulture, $", {this.Props / ok:0.0} props") : string.Empty;
+        return $"{runs}, {shape}{props}";
     }
 
     private void Add(ulong seed, GenResult result)
@@ -116,7 +118,7 @@ public sealed class LevelStats
             return;
         }
 
-        this.CheckArtillery(seed, plan);
+        this.CheckProps(seed, plan);
         this.Cells += plan.Cells.Count;
         this.Zones += plan.Zones.Count;
         this.EmptyZones += plan.EmptyZones;
@@ -137,23 +139,21 @@ public sealed class LevelStats
         }
     }
 
-    /// <summary>Artillery goes only in front-line cells, never no man's land, and never past the recipe's limit.</summary>
-    private void CheckArtillery(ulong seed, LevelPlan plan)
+    /// <summary>Props go only in cells that allow them, and never past the recipe's limit.</summary>
+    private void CheckProps(ulong seed, LevelPlan plan)
     {
-        this.Artillery += plan.Artillery.Count;
-        if (plan.Artillery.Count > plan.Def.ArtilleryMax)
+        this.Props += plan.Props.Count;
+        if (plan.Props.Count > plan.Def.PropMax)
         {
-            this.failures.Add($"seed {seed} placed {plan.Artillery.Count} artillery pieces, over the recipe's {plan.Def.ArtilleryMax}");
+            this.failures.Add($"seed {seed} placed {plan.Props.Count} props, over the recipe's {plan.Def.PropMax}");
         }
 
-        foreach (PlannedArtillery gun in plan.Artillery)
+        foreach (PlannedProp prop in plan.Props)
         {
-            CellData cell = plan.Cells[gun.CellIndex].Info;
-            bool front = cell.HasTag(FrontPlanner.FriendlyTrenchTag) || cell.HasTag(FrontPlanner.FriendlyGroundTag)
-                || cell.HasTag(FrontPlanner.EnemyTrenchTag) || cell.HasTag(FrontPlanner.EnemyGroundTag);
-            if (cell.HasTag(FrontPlanner.NoMansLandTag) || !front)
+            CellData cell = plan.Cells[prop.CellIndex].Info;
+            if (plan.Def.PropExcludedTags.Any(cell.HasTag))
             {
-                this.failures.Add($"seed {seed}: artillery '{gun.PieceId}' placed in {cell.ScenePath}, which is not a front-line cell");
+                this.failures.Add($"seed {seed}: prop '{prop.PropId}' placed in {cell.ScenePath}, which excludes props");
             }
         }
     }

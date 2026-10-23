@@ -96,8 +96,11 @@ public sealed class LevelData
     /// <summary>Gets the loot budget at depth 0.</summary>
     public float LootBudget { get; init; } = 4f;
 
-    /// <summary>Gets the most artillery pieces the level places, on <c>ArtillerySpawn</c> markers in cells tagged for it (the front lines; never no man's land). Zero places none.</summary>
-    public int ArtilleryMax { get; init; }
+    /// <summary>Gets the most props the level places, on prop spawns in cells that do not carry a tag in <see cref="PropExcludedTags"/>. Zero places none.</summary>
+    public int PropMax { get; init; }
+
+    /// <summary>Gets tags that keep props out of a cell: no man's land, a safe room.</summary>
+    public IReadOnlyList<string> PropExcludedTags { get; init; } = [];
 
     /// <summary>Gets how many seeds the generator tries before giving up on this recipe.</summary>
     public int MaxAttempts { get; init; } = 24;

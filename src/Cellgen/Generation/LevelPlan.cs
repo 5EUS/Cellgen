@@ -44,8 +44,8 @@ public sealed class LevelPlan
     /// <summary>Gets every item rolled.</summary>
     public required IReadOnlyList<PlannedItem> Items { get; init; }
 
-    /// <summary>Gets every artillery piece placed.</summary>
-    public required IReadOnlyList<PlannedArtillery> Artillery { get; init; }
+    /// <summary>Gets every prop placed.</summary>
+    public required IReadOnlyList<PlannedProp> Props { get; init; }
 
     /// <summary>Gets how many zones were left empty.</summary>
     public required int EmptyZones { get; init; }
@@ -89,9 +89,9 @@ public sealed class LevelPlan
             text.Append(CultureInfo.InvariantCulture, $"i {item.CellIndex} {item.Spawn.NodePath} {item.ItemId} {item.Price}\n");
         }
 
-        foreach (PlannedArtillery gun in this.Artillery)
+        foreach (PlannedProp prop in this.Props)
         {
-            text.Append(CultureInfo.InvariantCulture, $"a {gun.CellIndex} {gun.Spawn.NodePath} {gun.PieceId}\n");
+            text.Append(CultureInfo.InvariantCulture, $"a {prop.CellIndex} {prop.Spawn.NodePath} {prop.PropId}\n");
         }
 
         return text.ToString();

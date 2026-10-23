@@ -91,7 +91,7 @@ public static class LevelGenerator
             ExitCell = exitCell,
             Zones = populator.Zones,
             Items = populator.Items,
-            Artillery = populator.Artillery,
+            Props = populator.Props,
             EmptyZones = populator.EmptyZones,
             EncounterBudget = populator.EncounterBudget,
             EncounterSpent = populator.EncounterSpent,

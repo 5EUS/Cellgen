@@ -42,8 +42,8 @@ public sealed class CellData
     /// <summary>Gets the cell's item spawns.</summary>
     public IReadOnlyList<ItemSpawnData> Items { get; init; } = [];
 
-    /// <summary>Gets the cell's artillery spawns.</summary>
-    public IReadOnlyList<ArtillerySpawnData> ArtillerySpawns { get; init; } = [];
+    /// <summary>Gets the cell's prop spawns.</summary>
+    public IReadOnlyList<PropSpawnData> PropSpawns { get; init; } = [];
 
     /// <summary>Gets a value indicating whether the cell contains a player start.</summary>
     public bool HasPlayerStart { get; init; }

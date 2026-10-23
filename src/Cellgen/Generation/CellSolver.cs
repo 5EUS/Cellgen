@@ -107,7 +107,7 @@ internal sealed class CellSolver
                 break;
             }
 
-            List<PlacedPiece> ordered = this.rng.WeightedOrder(viable, static p => p.Variant.Weight);
+            List<PlacedPiece> ordered = this.rng.WeightedOrderList(viable, static p => p.Variant.Weight);
             var frame = new Frame(ordered);
             this.Assign(frame.Take());
             stack.Push(frame);

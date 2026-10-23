@@ -148,7 +148,14 @@ public sealed class GenRng
     /// <param name="items">The items.</param>
     /// <param name="weight">Each item's weight.</param>
     /// <returns>A new, ordered list.</returns>
-    internal List<T> WeightedOrder<T>(IReadOnlyList<T> items, Func<T, float> weight)
+    public IReadOnlyList<T> WeightedOrder<T>(IReadOnlyList<T> items, Func<T, float> weight) => this.WeightedOrderList(items, weight);
+
+    /// <summary>The same as <see cref="WeightedOrder{T}"/>, as the list the solver sorts in place.</summary>
+    /// <typeparam name="T">The item type.</typeparam>
+    /// <param name="items">The items.</param>
+    /// <param name="weight">Each item's weight.</param>
+    /// <returns>A new, ordered list.</returns>
+    internal List<T> WeightedOrderList<T>(IReadOnlyList<T> items, Func<T, float> weight)
     {
         var keyed = new List<(double Key, int Index)>(items.Count);
         for (int i = 0; i < items.Count; i++)
