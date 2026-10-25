@@ -1,15 +1,18 @@
 namespace Cellgen;
 
 /// <summary>
+/// <para>
 /// Slot-grid geometry: faces, quarter turns, and where a cell's slots and
 /// sockets land once it is rotated.
-///
+/// </para>
+/// <para>
 /// A cell is authored with its slot <c>(0,0,0)</c> at the scene origin and
 /// its footprint extending along <c>+X</c>, <c>+Y</c> and <c>+Z</c>. A
 /// rotation of <c>r</c> quarter turns is <c>Basis.FromEuler(0, r·90°, 0)</c>
 /// about the footprint's centre, which maps East to North: every function
 /// here agrees with that one transform, and <c>tools/procgen_check.gd</c>
 /// asserts it.
+/// </para>
 /// </summary>
 public static class SlotMath
 {

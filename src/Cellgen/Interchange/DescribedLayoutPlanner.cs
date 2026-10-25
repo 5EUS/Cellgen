@@ -8,21 +8,15 @@ namespace Cellgen.Interchange;
 /// an attempt; Cellgen checks it against the recipe (bounds, adjacency, roles, structures) and
 /// builds the plan, so a bad description fails the attempt with a reason instead of corrupting it.
 /// </summary>
-public sealed class DescribedLayoutPlanner : ILayoutPlanner
+/// <remarks>Initializes a new instance of the <see cref="DescribedLayoutPlanner"/> class.</remarks>
+/// <param name="id">The layout id recipes name.</param>
+/// <param name="describe">Produces the plan description JSON for an attempt, or null when it could not (the attempt then fails).</param>
+public sealed class DescribedLayoutPlanner(string id, Func<LayoutRequest, string?> describe) : ILayoutPlanner
 {
-    private readonly Func<LayoutRequest, string?> describe;
-
-    /// <summary>Initializes a new instance of the <see cref="DescribedLayoutPlanner"/> class.</summary>
-    /// <param name="id">The layout id recipes name.</param>
-    /// <param name="describe">Produces the plan description JSON for an attempt, or null when it could not (the attempt then fails).</param>
-    public DescribedLayoutPlanner(string id, Func<LayoutRequest, string?> describe)
-    {
-        this.Id = id;
-        this.describe = describe;
-    }
+    private readonly Func<LayoutRequest, string?> describe = describe;
 
     /// <inheritdoc/>
-    public string Id { get; }
+    public string Id { get; } = id;
 
     /// <inheritdoc/>
     public MacroPlan? Plan(LayoutRequest request, out string failure)

@@ -1,16 +1,19 @@
 namespace Cellgen.Generation;
 
 /// <summary>
+/// <para>
 /// Stage B: chooses a cell, rotation and anchor for every slot the macro
 /// plan occupied, so that every required link is an open, compatible pair of
 /// sockets and no open socket faces something it can't.
-///
+/// </para>
+/// <para>
 /// A depth-first search that always fills the most constrained slot next
 /// (fewest fitting placements), tries placements in weighted-random order,
 /// and backtracks on a dead end - within a step budget, past which the
 /// attempt fails and the generator retries on another seed. Forward checking
 /// is what keeps it fast: a slot with no placement left is found the step it
 /// happens, not twenty steps later.
+/// </para>
 /// </summary>
 internal sealed class CellSolver
 {
@@ -49,10 +52,7 @@ internal sealed class CellSolver
 
         // Path order, then branches in the order they grew: a deterministic
         // order that also puts the most connected slots first.
-        foreach (Int3 slot in plan.CriticalPath)
-        {
-            this.open.Add(slot);
-        }
+        this.open.AddRange(plan.CriticalPath);
 
         foreach ((Int3 slot, SlotRole role) in plan.Roles)
         {
@@ -336,7 +336,7 @@ internal sealed class CellSolver
             return !linked || ours is not null;
         }
 
-        return ours is null || ours.IsBoundaryOk;
+        return ours?.IsBoundaryOk != false;
     }
 
     /// <summary>Structures were placed before anything around them existed; check they fit what grew there.</summary>
@@ -358,7 +358,7 @@ internal sealed class CellSolver
                     SocketData? ours = piece.SocketAt(slot, face);
                     bool ok = this.assigned.TryGetValue(neighbour, out other)
                         ? this.Pairs(ours, other.SocketAt(neighbour, SlotMath.Opposite(face)), this.plan.IsLinked(slot, neighbour))
-                        : ours is null || ours.IsBoundaryOk;
+                        : ours?.IsBoundaryOk != false;
                     if (!ok)
                     {
                         failure = $"structure '{structure.Def.Id}' has a socket at {slot} {face} that nothing next to it can meet";

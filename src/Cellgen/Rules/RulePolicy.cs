@@ -124,12 +124,12 @@ public sealed class RulePolicy : IGenerationPolicy
             return false;
         }
 
-        if (rule.TagsAny is not null && !rule.TagsAny.Any(tag => Carries(tags, tag)))
+        if (rule.TagsAny?.Any(tag => Carries(tags, tag)) == false)
         {
             return false;
         }
 
-        return rule.TagsAll is null || rule.TagsAll.All(tag => Carries(tags, tag));
+        return rule.TagsAll?.All(tag => Carries(tags, tag)) != false;
     }
 
     private static bool Carries(IReadOnlyList<string> tags, string tag)

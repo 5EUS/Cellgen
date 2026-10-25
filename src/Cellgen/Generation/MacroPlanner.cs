@@ -1,12 +1,15 @@
 namespace Cellgen.Generation;
 
 /// <summary>
+/// <para>
 /// Stage A: decides the level's topology - the start-to-exit path, where
 /// structures go, and side branches - without choosing any cell.
-///
+/// </para>
+/// <para>
 /// Topology first is what keeps the solver honest: it only has to find
 /// cells that realize a connected plan, rather than hope a connected level
 /// emerges from local socket matching.
+/// </para>
 /// </summary>
 internal sealed class MacroPlanner
 {

@@ -1,12 +1,15 @@
 namespace Cellgen;
 
 /// <summary>
+/// <para>
 /// A face of a slot. North is forward (<c>-Z</c>); the four
 /// horizontal faces are in clockwise order seen from above, so a quarter
 /// turn is an index step.
-///
+/// </para>
+/// <para>
 /// The values are serialized into every cell scene's sockets. Append, never
 /// renumber.
+/// </para>
 /// </summary>
 public enum CellFace
 {

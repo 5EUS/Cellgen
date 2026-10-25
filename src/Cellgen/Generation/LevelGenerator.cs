@@ -1,8 +1,8 @@
 namespace Cellgen.Generation;
 
 /// <summary>
-/// Turns a recipe, a seed and a depth into a <see cref="LevelPlan"/>.
-///
+/// <para>Turns a recipe, a seed and a depth into a <see cref="LevelPlan"/>.</para>
+/// <para>
 /// Each attempt runs the three stages on its own seed - topology
 /// (an <see cref="ILayoutPlanner"/> chosen by the recipe's <c>LayoutId</c>), cells (<see cref="CellSolver"/>), budgets
 /// (<see cref="Populator"/>) - and is validated as a whole: the exit and
@@ -11,6 +11,7 @@ namespace Cellgen.Generation;
 /// <c>MaxAttempts</c> the recipe's fallback is used. Nothing here touches the
 /// scene tree, so the editor preview, the headless check and the game all
 /// run exactly this.
+/// </para>
 /// </summary>
 public static class LevelGenerator
 {

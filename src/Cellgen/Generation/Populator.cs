@@ -1,36 +1,30 @@
 namespace Cellgen.Generation;
 
 /// <summary>
+/// <para>
 /// Stage C: spends the level's budgets. Each spawn zone gets an encounter
 /// that fits its own rules and its fair share of what is left; each item
 /// spawn rolls from its table.
-///
+/// </para>
+/// <para>
 /// Required zones are filled first and optional ones get the remainder, so
 /// a tight budget thins out the side rooms rather than the critical path.
+/// </para>
 /// </summary>
-internal sealed class Populator
+/// <remarks>Initializes a new instance of the <see cref="Populator"/> class.</remarks>
+/// <param name="def">The recipe.</param>
+/// <param name="context">Depth and encounters.</param>
+/// <param name="seed">The attempt's seed; zone seeds derive from it.</param>
+/// <param name="rng">This stage's random stream.</param>
+/// <param name="report">Collects diagnostics.</param>
+internal sealed class Populator(LevelData def, GenContext context, ulong seed, GenRng rng, GenReport report)
 {
-    private readonly LevelData def;
-    private readonly GenContext context;
-    private readonly GenRng rng;
-    private readonly GenReport report;
-    private readonly ulong seed;
+    private readonly LevelData def = def;
+    private readonly GenContext context = context;
+    private readonly GenRng rng = rng;
+    private readonly GenReport report = report;
+    private readonly ulong seed = seed;
     private IReadOnlyList<PlannedCell> cells = [];
-
-    /// <summary>Initializes a new instance of the <see cref="Populator"/> class.</summary>
-    /// <param name="def">The recipe.</param>
-    /// <param name="context">Depth and encounters.</param>
-    /// <param name="seed">The attempt's seed; zone seeds derive from it.</param>
-    /// <param name="rng">This stage's random stream.</param>
-    /// <param name="report">Collects diagnostics.</param>
-    public Populator(LevelData def, GenContext context, ulong seed, GenRng rng, GenReport report)
-    {
-        this.def = def;
-        this.context = context;
-        this.seed = seed;
-        this.rng = rng;
-        this.report = report;
-    }
 
     /// <summary>Gets the zones given encounters, by handle.</summary>
     public List<PlannedZone> Zones { get; } = [];

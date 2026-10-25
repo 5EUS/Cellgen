@@ -7,26 +7,22 @@ namespace Cellgen;
 /// planner documents, such as band widths or bend chances. Cellgen never reads
 /// them; a missing key gives the planner's own fallback.
 /// </summary>
-public sealed class LayoutSettings
+/// <remarks>Initializes a new instance of the <see cref="LayoutSettings"/> class.</remarks>
+/// <param name="values">Key to value; numbers, booleans and strings.</param>
+public sealed class LayoutSettings(IReadOnlyDictionary<string, object> values)
 {
-    private readonly IReadOnlyDictionary<string, object> values;
-
-    /// <summary>Initializes a new instance of the <see cref="LayoutSettings"/> class.</summary>
-    /// <param name="values">Key to value; numbers, booleans and strings.</param>
-    public LayoutSettings(IReadOnlyDictionary<string, object> values) => this.values = values;
-
     /// <summary>Gets settings with no keys.</summary>
     public static LayoutSettings Empty { get; } = new(new Dictionary<string, object>(StringComparer.Ordinal));
 
     /// <summary>Gets every setting, for writing out to a host.</summary>
-    internal IReadOnlyDictionary<string, object> Values => this.values;
+    internal IReadOnlyDictionary<string, object> Values { get; } = values;
 
     /// <summary>Gets a number.</summary>
     /// <param name="key">The key.</param>
     /// <param name="fallback">Returned when the key is missing or not a number.</param>
     /// <returns>The value.</returns>
     public float GetFloat(string key, float fallback) =>
-        this.values.TryGetValue(key, out object? value) && value is IConvertible number and not string and not bool
+        this.Values.TryGetValue(key, out object? value) && value is IConvertible number and not string and not bool
             ? Convert.ToSingle(number, CultureInfo.InvariantCulture)
             : fallback;
 
@@ -35,7 +31,7 @@ public sealed class LayoutSettings
     /// <param name="fallback">Returned when the key is missing or not a number.</param>
     /// <returns>The value, rounded to the nearest integer.</returns>
     public int GetInt(string key, int fallback) =>
-        this.values.TryGetValue(key, out object? value) && value is IConvertible number and not string and not bool
+        this.Values.TryGetValue(key, out object? value) && value is IConvertible number and not string and not bool
             ? (int)Math.Round(Convert.ToDouble(number, CultureInfo.InvariantCulture))
             : fallback;
 
@@ -44,12 +40,12 @@ public sealed class LayoutSettings
     /// <param name="fallback">Returned when the key is missing or not text.</param>
     /// <returns>The value.</returns>
     public string GetString(string key, string fallback) =>
-        this.values.TryGetValue(key, out object? value) && value is string text ? text : fallback;
+        this.Values.TryGetValue(key, out object? value) && value is string text ? text : fallback;
 
     /// <summary>Gets a flag.</summary>
     /// <param name="key">The key.</param>
     /// <param name="fallback">Returned when the key is missing or not a boolean.</param>
     /// <returns>The value.</returns>
     public bool GetBool(string key, bool fallback) =>
-        this.values.TryGetValue(key, out object? value) && value is bool flag ? flag : fallback;
+        this.Values.TryGetValue(key, out object? value) && value is bool flag ? flag : fallback;
 }

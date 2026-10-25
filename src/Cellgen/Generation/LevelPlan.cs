@@ -4,13 +4,16 @@ using System.Text;
 namespace Cellgen.Generation;
 
 /// <summary>
+/// <para>
 /// A finished level as plain data: which cells go where, which zone gets
 /// which encounter, which spawn gets which item. Nothing here is a node.
-///
+/// </para>
+/// <para>
 /// This is the seam between generating a level and building one. The
 /// editor preview draws it, <c>tools/procgen_check.gd</c> fingerprints it,
 /// the console dumps it, and <c>LevelBuilder</c> turns it into a scene; the
 /// same recipe, seed and depth always give the same plan.
+/// </para>
 /// </summary>
 public sealed class LevelPlan
 {

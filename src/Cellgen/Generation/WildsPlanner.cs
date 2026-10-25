@@ -1,45 +1,38 @@
 namespace Cellgen.Generation;
 
 /// <summary>
+/// <para>
 /// Stage A for the wilds layout: a whole-grid wilderness
 /// rather than a corridor. It decides only what sockets can't: a closed
 /// border ring, structures, the start and an exit far from it, a meandering
 /// path between them that is guaranteed open, and a few two-layer landmark
 /// slots. Every other slot is filled by the solver with any cell tagged for
 /// open ground.
-///
+/// </para>
+/// <para>
 /// Which cells end up together is the cells' business: a group of cells that
 /// share an interior socket type no other group accepts can only sit beside
 /// each other (or beside their own edge cells, which also carry the shared
 /// ground socket), so the group grows as a cluster whose size is set by how
 /// heavily its edge cells are weighted.
+/// </para>
 /// </summary>
-internal sealed class WildsPlanner
+/// <remarks>Initializes a new instance of the <see cref="WildsPlanner"/> class.</remarks>
+/// <param name="def">The recipe.</param>
+/// <param name="context">Depth and unlocks.</param>
+/// <param name="rng">This stage's random stream.</param>
+/// <param name="report">Collects diagnostics.</param>
+internal sealed class WildsPlanner(LevelData def, GenContext context, GenRng rng, GenReport report)
 {
     private const int LandmarkSpacing = 5;
 
-    private readonly LevelData def;
-    private readonly GenContext context;
-    private readonly GenRng rng;
-    private readonly GenReport report;
+    private readonly LevelData def = def;
+    private readonly GenContext context = context;
+    private readonly GenRng rng = rng;
+    private readonly GenReport report = report;
     private readonly MacroPlan plan = new();
-    private readonly int width;
-    private readonly int depth;
-
-    /// <summary>Initializes a new instance of the <see cref="WildsPlanner"/> class.</summary>
-    /// <param name="def">The recipe.</param>
-    /// <param name="context">Depth and unlocks.</param>
-    /// <param name="rng">This stage's random stream.</param>
-    /// <param name="report">Collects diagnostics.</param>
-    public WildsPlanner(LevelData def, GenContext context, GenRng rng, GenReport report)
-    {
-        this.def = def;
-        this.context = context;
-        this.rng = rng;
-        this.report = report;
-        this.width = def.GridSize.X;
-        this.depth = def.GridSize.Y;
-    }
+    private readonly int width = def.GridSize.X;
+    private readonly int depth = def.GridSize.Y;
 
     /// <summary>Plans the level.</summary>
     /// <param name="failure">Why planning failed, when it did.</param>
