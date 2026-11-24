@@ -17,6 +17,9 @@ public sealed class MacroPlan
     /// <summary>Gets the exit slot: the last slot appended to the path.</summary>
     public Int3 Exit => this.CriticalPath[^1];
 
+    /// <summary>Gets the ground heights the cell solver must meet; null for a level whose ground is level.</summary>
+    public ElevationField? Elevation { get; private set; }
+
     /// <summary>Gets the role of every occupied slot.</summary>
     internal Dictionary<Int3, SlotRole> Roles { get; } = [];
 
@@ -49,6 +52,10 @@ public sealed class MacroPlan
     /// <param name="role">The role, when occupied.</param>
     /// <returns>True when the slot is occupied.</returns>
     public bool TryGetRole(Int3 slot, out SlotRole role) => this.Roles.TryGetValue(slot, out role);
+
+    /// <summary>Gives the level hilly ground: the solver then places only cells whose corners fit the field, lifted to it.</summary>
+    /// <param name="field">The field. It must cover every occupied slot's corners.</param>
+    public void SetElevation(ElevationField field) => this.Elevation = field;
 
     /// <summary>Marks a slot occupied.</summary>
     /// <param name="slot">The slot.</param>

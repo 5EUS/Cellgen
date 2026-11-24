@@ -15,6 +15,13 @@ public sealed class CellData
     /// <summary>Gets the slots the cell occupies along X, Y (layers) and Z.</summary>
     public Int3 Footprint { get; init; } = Int3.One;
 
+    /// <summary>
+    /// Gets the ground height at each slot corner of the footprint, in elevation steps above the cell's origin plane, row-major
+    /// <c>z * (Footprint.X + 1) + x</c>. Empty means flat. Cells with the same heights fit the same terrain; the generator
+    /// lifts the cell by a whole number of steps so its corners meet its neighbours' (see <c>ElevationField</c>).
+    /// </summary>
+    public IReadOnlyList<int> CornerHeights { get; init; } = [];
+
     /// <summary>Gets the cell's open faces.</summary>
     public IReadOnlyList<SocketEntryData> Sockets { get; init; } = [];
 

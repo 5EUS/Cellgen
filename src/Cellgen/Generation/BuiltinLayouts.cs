@@ -8,4 +8,7 @@ public static class BuiltinLayouts
 
     /// <summary>Gets the id of the whole-grid wilderness, whose clusters come from sockets alone.</summary>
     public const string Wilds = "wilds";
+
+    /// <summary>Gets the id of the wilderness over hilly ground: <see cref="Wilds"/> with an <see cref="ElevationField"/> laid over it.</summary>
+    public const string Hills = "hills";
 }

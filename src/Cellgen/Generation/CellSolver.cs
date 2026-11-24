@@ -290,6 +290,11 @@ internal sealed class CellSolver
             return false;
         }
 
+        if (!ElevationFit.TryLift(piece, this.plan.Elevation, out _))
+        {
+            return false;
+        }
+
         foreach ((Int3 local, CellFace face) in piece.Variant.OuterFaces)
         {
             if (!this.FaceFits(piece, piece.Anchor + local, face))
@@ -346,6 +351,12 @@ internal sealed class CellSolver
         {
             foreach (PlacedPiece piece in structure.Pieces)
             {
+                if (!ElevationFit.TryLift(piece, this.plan.Elevation, out _))
+                {
+                    failure = $"structure '{structure.Def.Id}' has a cell at {piece.Anchor} whose ground does not fit the terrain there";
+                    return false;
+                }
+
                 foreach ((Int3 local, CellFace face) in piece.Variant.OuterFaces)
                 {
                     Int3 slot = piece.Anchor + local;

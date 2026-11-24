@@ -53,6 +53,10 @@ internal sealed class CellVariant
 
         this.Slots = slots;
         this.OuterFaces = outer;
+
+        // A cell with no (or malformed) heights is level.
+        int expected = (template.Footprint.X + 1) * (template.Footprint.Z + 1);
+        this.Corners = SlotMath.RotateCorners(template.Info.CornerHeights.Count == expected ? template.Info.CornerHeights : [], template.Footprint, rotation);
     }
 
     /// <summary>Gets the cell.</summary>
@@ -72,6 +76,9 @@ internal sealed class CellVariant
 
     /// <summary>Gets or sets this variant's share of its cell's weight. Symmetric cells have fewer distinct variants, each weighted more.</summary>
     public float Weight { get; set; } = 1f;
+
+    /// <summary>Gets the ground height at each corner of the rotated footprint, in steps, row-major over <c>Footprint.X + 1</c> by <c>Footprint.Z + 1</c>.</summary>
+    public int[] Corners { get; }
 
     /// <summary>Gets whether any slot has a socket on <paramref name="face"/>.</summary>
     /// <param name="face">The face.</param>
@@ -112,6 +119,11 @@ internal sealed class CellVariant
         keys.Sort(System.StringComparer.Ordinal);
         var builder = new StringBuilder();
         builder.Append(this.Footprint.ToString());
+        if (System.Array.Exists(this.Corners, static h => h != 0))
+        {
+            builder.Append("^h").AppendJoin(',', this.Corners);
+        }
+
         foreach (string key in keys)
         {
             builder.Append('|').Append(key);

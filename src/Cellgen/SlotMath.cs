@@ -99,6 +99,42 @@ public static class SlotMath
         return result;
     }
 
+    /// <summary>Rotates a grid of slot-corner values (row-major, <c>(footprint.X + 1) * (footprint.Z + 1)</c>) by quarter turns, the way <see cref="RotateSlot"/> turns a slot.</summary>
+    /// <param name="values">The corner values of the unrotated footprint.</param>
+    /// <param name="footprint">The unrotated footprint.</param>
+    /// <param name="quarterTurns">Clockwise quarter turns, as everywhere else.</param>
+    /// <returns>The values for the rotated footprint, row-major over its own corners.</returns>
+    public static int[] RotateCorners(IReadOnlyList<int> values, Int3 footprint, int quarterTurns)
+    {
+        int cols = footprint.X + 1;
+        int rows = footprint.Z + 1;
+        var current = new int[cols * rows];
+        for (int i = 0; i < current.Length; i++)
+        {
+            current[i] = i < values.Count ? values[i] : 0;
+        }
+
+        int fx = footprint.X;
+        int fz = footprint.Z;
+        for (int turn = 0; turn < Mod(quarterTurns, 4); turn++)
+        {
+            // One turn: corner (x, z) -> (z, fx - x), footprint (fx, fz) -> (fz, fx).
+            var next = new int[current.Length];
+            for (int z = 0; z <= fz; z++)
+            {
+                for (int x = 0; x <= fx; x++)
+                {
+                    next[((fx - x) * (fz + 1)) + z] = current[(z * (fx + 1)) + x];
+                }
+            }
+
+            current = next;
+            (fx, fz) = (fz, fx);
+        }
+
+        return current;
+    }
+
     /// <summary>Gets whether a slot lies within a footprint.</summary>
     /// <param name="footprint">The footprint.</param>
     /// <param name="slot">The slot.</param>

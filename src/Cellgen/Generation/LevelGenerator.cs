@@ -133,6 +133,7 @@ public static class LevelGenerator
             Cells = cells,
             CriticalPath = macro.CriticalPath,
             StartCell = startCell,
+            ElevationStep = macro.Elevation?.StepMetres ?? 0f,
             ExitCell = exitCell,
             Zones = populator.Zones,
             Items = populator.Items,
@@ -181,7 +182,8 @@ public static class LevelGenerator
         for (int i = 0; i < pieces.Count; i++)
         {
             PlacedPiece piece = pieces[i];
-            cells.Add(new PlannedCell(i, piece.Variant.Template.Info, piece.Anchor, piece.Variant.Rotation, structureOf.GetValueOrDefault(piece, string.Empty)));
+            ElevationFit.TryLift(piece, macro.Elevation, out int lift);
+            cells.Add(new PlannedCell(i, piece.Variant.Template.Info, piece.Anchor, piece.Variant.Rotation, structureOf.GetValueOrDefault(piece, string.Empty), lift));
             foreach (Int3 slot in piece.Covered())
             {
                 if (slot == macro.Start)

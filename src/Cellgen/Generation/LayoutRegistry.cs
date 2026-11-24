@@ -19,6 +19,7 @@ public sealed class LayoutRegistry
         var registry = new LayoutRegistry();
         registry.Register(new CorridorsLayout());
         registry.Register(new WildsLayout());
+        registry.Register(new ElevationLayout(BuiltinLayouts.Hills, new WildsLayout()));
         return registry;
     }
 

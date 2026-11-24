@@ -78,7 +78,7 @@ public sealed class CustomLayoutTests
 
         LayoutRegistry mine = LayoutRegistry.CreateBuiltin();
         mine.Register(new LinePlanner());
-        Assert.Equal([BuiltinLayouts.Corridors, LineId, BuiltinLayouts.Wilds], mine.Ids);
+        Assert.Equal([BuiltinLayouts.Corridors, BuiltinLayouts.Hills, LineId, BuiltinLayouts.Wilds], mine.Ids);
         Assert.Throws<InvalidOperationException>(() => mine.Register(new LinePlanner()));
 
         Assert.True(mine.Unregister(LineId));

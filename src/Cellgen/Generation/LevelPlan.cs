@@ -38,6 +38,9 @@ public sealed class LevelPlan
     /// <summary>Gets the index of the start cell.</summary>
     public required int StartCell { get; init; }
 
+    /// <summary>Gets how many metres one step of <see cref="PlannedCell.Elevation"/> is; 0 when the level's ground is level.</summary>
+    public float ElevationStep { get; init; }
+
     /// <summary>Gets the index of the exit cell.</summary>
     public required int ExitCell { get; init; }
 
@@ -79,7 +82,7 @@ public sealed class LevelPlan
         text.Append(CultureInfo.InvariantCulture, $"{this.Def.Id}|{this.Seed}|{this.Depth}|{this.StartCell}|{this.ExitCell}\n");
         foreach (PlannedCell cell in this.Cells)
         {
-            text.Append(CultureInfo.InvariantCulture, $"c {cell.Info.ScenePath} {cell.Anchor} {cell.Rotation} {cell.StructureId}\n");
+            text.Append(CultureInfo.InvariantCulture, $"c {cell.Info.ScenePath} {cell.Anchor} {cell.Rotation} {cell.StructureId}{(cell.Elevation == 0 ? string.Empty : $" e{cell.Elevation}")}\n");
         }
 
         foreach (PlannedZone zone in this.Zones)
