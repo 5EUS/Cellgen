@@ -34,8 +34,16 @@ A failed attempt retries on a derived seed; after `MaxAttempts` the recipe's
 ## Writing a layout planner
 
 Built-in layouts are `corridors` (a winding path with side branches) and
-`wilds` (a whole-grid wilderness whose clusters come from sockets). Add your
-own by implementing `ILayoutPlanner` and registering it:
+`wilds` (a whole-grid wilderness whose clusters come from sockets), and `hills`
+(`wilds` over hilly ground). Hills is `ElevationLayout`, which wraps any planner:
+it rolls an `ElevationField` of heights on slot corners, rolling noise with a few
+flat plateaus (settings `elevation_step`, `elevation_relief`, `elevation_scale`,
+`elevation_plateaus`), and sets it on the plan
+with `MacroPlan.SetElevation`. The solver then places only cells whose
+`CellData.CornerHeights`, lifted by whole steps, match it, and each
+`PlannedCell.Elevation` is that lift. Start, exit, structures and slots reserved
+for a non-ground tag stand on level pads. Add your own by implementing
+`ILayoutPlanner` and registering it:
 
 ```csharp
 sealed class LinePlanner : ILayoutPlanner

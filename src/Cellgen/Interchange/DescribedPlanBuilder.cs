@@ -28,6 +28,7 @@ internal static class DescribedPlanBuilder
         List<(Int3 At, string Tag)> tags = checker.Tags(description.RequireTag, slots);
         List<(Int3 At, CellFace Face, string Socket)> sockets = checker.Sockets(description.RequireSocket, slots);
         List<(StructureData Structure, int Index, int? Count, DescribedRegion? Region)> structures = checker.Structures(description.Structures);
+        DescribedElevation? elevation = checker.Elevation(description.Elevation);
         if (problems.Count > 0)
         {
             failure = Summarize(problems);
@@ -35,7 +36,52 @@ internal static class DescribedPlanBuilder
         }
 
         MacroPlan plan = Assemble(slots, path, links, tags, sockets);
-        return PlaceStructures(plan, structures, request, out failure) ? plan : null;
+        if (!PlaceStructures(plan, structures, request, out failure))
+        {
+            return null;
+        }
+
+        return ApplyElevation(plan, elevation, request, out failure) ? plan : null;
+    }
+
+    /// <summary>Gives the plan its ground once the structures are placed, since they are pads: the author's heights, or a rolled field.</summary>
+    private static bool ApplyElevation(MacroPlan plan, DescribedElevation? elevation, LayoutRequest request, out string failure)
+    {
+        failure = string.Empty;
+        if (elevation is null)
+        {
+            return true;
+        }
+
+        int maxX = 0;
+        int maxZ = 0;
+        foreach (Int3 slot in plan.Roles.Keys)
+        {
+            maxX = Math.Max(maxX, slot.X);
+            maxZ = Math.Max(maxZ, slot.Z);
+        }
+
+        if (elevation.Heights.Count == 0)
+        {
+            ElevationField? rolled = ElevationLayout.Roll(plan, request.Def.GroundTag, elevation.Step, elevation.Relief, elevation.Scale, elevation.Plateaus, request.Rng, out failure);
+            if (rolled is null)
+            {
+                return false;
+            }
+
+            plan.SetElevation(rolled);
+            return true;
+        }
+
+        int depth = elevation.Heights.Count / elevation.Width;
+        if (elevation.Width < maxX + 2 || depth < maxZ + 2)
+        {
+            failure = $"elevation.heights covers {elevation.Width}x{depth} corners, but the slots reach ({maxX}, {maxZ}) and need at least {maxX + 2}x{maxZ + 2}";
+            return false;
+        }
+
+        plan.SetElevation(new ElevationField(new Int2(elevation.Width, depth), elevation.Step, elevation.Heights));
+        return true;
     }
 
     private static MacroPlan Assemble(
@@ -145,6 +191,36 @@ internal static class DescribedPlanBuilder
     private sealed class Checker(LevelData def, List<string> problems)
     {
         private readonly IReadOnlyList<int> layers = def.AllowedLayers.Count > 0 ? def.AllowedLayers : [0];
+
+        internal DescribedElevation? Elevation(DescribedElevation? described)
+        {
+            if (described is null)
+            {
+                return null;
+            }
+
+            if (!float.IsFinite(described.Step) || described.Step <= 0f)
+            {
+                problems.Add("elevation.step must be above zero (metres per height step)");
+            }
+
+            if (described.Relief < 0)
+            {
+                problems.Add("elevation.relief must not be negative");
+            }
+
+            if (described.Scale < 2)
+            {
+                problems.Add("elevation.scale must be at least 2");
+            }
+
+            if (described.Heights.Count > 0 && (described.Width < 2 || described.Heights.Count % described.Width != 0 || described.Heights.Count / described.Width < 2))
+            {
+                problems.Add($"elevation.heights has {described.Heights.Count} values, which is not a grid {described.Width} corners across and at least 2 deep; set elevation.width");
+            }
+
+            return described;
+        }
 
         internal Dictionary<Int3, SlotRole> Slots(IReadOnlyList<DescribedSlot> described)
         {

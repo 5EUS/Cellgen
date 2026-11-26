@@ -13,7 +13,8 @@ namespace Cellgen.Interchange;
 ///   "links": [ { "a": [1,0,0], "b": [1,0,1] } ],
 ///   "require_tag": [ { "at": [1,0,0], "tag": "corridor" } ],
 ///   "require_socket": [ { "at": [1,0,0], "face": "north", "socket": "trench" } ],
-///   "structures": [ { "index": 1, "count": 1, "region": { "layer": 0, "usable": { "x": [1, 6], "z": [3, 5] }, "avoid_columns": [2] } } ] }
+///   "structures": [ { "index": 1, "count": 1, "region": { "layer": 0, "usable": { "x": [1, 6], "z": [3, 5] }, "avoid_columns": [2] } } ],
+///   "elevation": { "step": 8, "relief": 7 } }
 /// </code>
 /// </summary>
 public sealed class PlanDescription
@@ -41,4 +42,7 @@ public sealed class PlanDescription
 
     /// <summary>Gets or sets the structures to place, by their position in the recipe's list (1-based).</summary>
     public IReadOnlyList<DescribedStructure> Structures { get; set; } = [];
+
+    /// <summary>Gets or sets hilly ground: null for level ground. See <see cref="DescribedElevation"/>.</summary>
+    public DescribedElevation? Elevation { get; set; }
 }

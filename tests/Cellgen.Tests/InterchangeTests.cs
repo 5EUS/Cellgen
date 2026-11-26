@@ -11,6 +11,8 @@ namespace Cellgen.Tests;
 /// <summary>The language-free contracts: plan descriptions, the requests scripts receive, and merged rule sets.</summary>
 public sealed class InterchangeTests
 {
+    private const string Row = "'slots': [ { 'at': [0,0,0], 'role': 'start' }, { 'at': [1,0,0], 'role': 'path' }, { 'at': [2,0,0], 'role': 'path' }, { 'at': [3,0,0], 'role': 'exit' } ], 'path': [ [0,0,0], [1,0,0], [2,0,0], [3,0,0] ]";
+
     private const string Line = "{ 'version': 1, "
         + "'slots': [ { 'at': [0,0,0], 'role': 'start' }, { 'at': [1,0,0], 'role': 'path' }, { 'at': [2,0,0], 'role': 'path' }, { 'at': [3,0,0], 'role': 'exit' } ], "
         + "'path': [ [0,0,0], [1,0,0], [2,0,0], [3,0,0] ] }";
@@ -97,6 +99,49 @@ public sealed class InterchangeTests
         Assert.Contains("required but the layout did not place it", forgotten, StringComparison.Ordinal);
     }
 
+    /// <summary>A description with no <c>elevation</c> has level ground; one that only names a step gets a rolled field that is level under the start and exit.</summary>
+    [Fact]
+    public void ADescribedLayoutCanAskForRolledHills()
+    {
+        Assert.Null(Assert.IsType<MacroPlan>(PlanFrom($"{{ 'version': 1, {Row} }}", PolicyFixture.Recipe(), out _)).Elevation);
+
+        string json = $"{{ 'version': 1, {Row}, 'elevation': {{ 'step': 8, 'relief': 5 }} }}";
+        MacroPlan plan = Assert.IsType<MacroPlan>(PlanFrom(json, PolicyFixture.Recipe(), out _));
+
+        ElevationField field = Assert.IsType<ElevationField>(plan.Elevation);
+        Assert.Equal(8f, field.StepMetres);
+        Assert.Equal(new Int2(5, 2), field.Corners);
+        foreach (int x in new[] { 0, 3 })
+        {
+            Assert.Equal(field.Get(x, 0), field.Get(x + 1, 0));
+            Assert.Equal(field.Get(x, 0), field.Get(x, 1));
+            Assert.Equal(field.Get(x, 0), field.Get(x + 1, 1));
+        }
+
+        Assert.All(Enumerable.Range(0, 4), x => Assert.InRange(Math.Abs(field.Get(x, 0) - field.Get(x + 1, 0)), 0, 1));
+        MacroPlan again = Assert.IsType<MacroPlan>(PlanFrom(json, PolicyFixture.Recipe(), out _));
+        Assert.Equal(Enumerable.Range(0, 5).Select(x => field.Get(x, 1)), Enumerable.Range(0, 5).Select(x => again.Elevation!.Get(x, 1)));
+    }
+
+    /// <summary>A description can give the heights itself, and they are checked: a grid that does not cover the slots, or is not a grid, fails the layout with the path named.</summary>
+    [Fact]
+    public void ADescribedLayoutCanGiveItsOwnHeights()
+    {
+        string heights = "'heights': [0,1,2,2,1,  0,1,1,2,1]";
+        MacroPlan plan = Assert.IsType<MacroPlan>(PlanFrom($"{{ 'version': 1, {Row}, 'elevation': {{ 'step': 4, 'width': 5, {heights} }} }}", PolicyFixture.Recipe(), out _));
+        Assert.Equal(2, plan.Elevation!.Get(2, 0));
+        Assert.Equal(1, plan.Elevation.Get(4, 1));
+
+        Assert.Null(PlanFrom($"{{ 'version': 1, {Row}, 'elevation': {{ 'step': 4, 'width': 4, {heights} }} }}", PolicyFixture.Recipe(), out string ragged));
+        Assert.Contains("elevation.heights has 10 values", ragged, StringComparison.Ordinal);
+
+        Assert.Null(PlanFrom($"{{ 'version': 1, {Row}, 'elevation': {{ 'step': 4, 'width': 3, 'heights': [0,0,0, 0,0,0] }} }}", PolicyFixture.Recipe(), out string small));
+        Assert.Contains("need at least 5x2", small, StringComparison.Ordinal);
+
+        Assert.Null(PlanFrom($"{{ 'version': 1, {Row}, 'elevation': {{ 'relief': 3 }} }}", PolicyFixture.Recipe(), out string stepless));
+        Assert.Contains("elevation.step must be above zero", stepless, StringComparison.Ordinal);
+    }
+
     /// <summary>
     /// A member left out of the JSON keeps the default the type declares. The source-generated reader
     /// skips initializers on <c>init</c>-only properties, so these types use <c>set</c>; this pins it.
@@ -112,6 +157,7 @@ public sealed class InterchangeTests
         Assert.NotNull(bare.RequireTag);
         Assert.NotNull(bare.RequireSocket);
         Assert.NotNull(bare.Structures);
+        Assert.Null(bare.Elevation);
 
         RuleParseResult rules = RuleSetReader.Parse("{}");
         RuleSet set = Assert.IsType<RuleSet>(rules.Set);

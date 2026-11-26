@@ -110,6 +110,12 @@ internal sealed class TemplateLibrary
             report.Warn(path, $"{info.ScenePath} changed since it was baked; using the old bake");
         }
 
+        int corners = (info.Footprint.X + 1) * (info.Footprint.Z + 1);
+        if (info.CornerHeights.Count != 0 && info.CornerHeights.Count != corners)
+        {
+            report.Warn(path, $"{info.ScenePath} has {info.CornerHeights.Count} corner heights but its footprint has {corners} corners; treating it as flat");
+        }
+
         int mask = rotationMask ?? (info.AllowedRotations & 0b1111);
         if (mask == 0)
         {

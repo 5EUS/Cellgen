@@ -87,6 +87,36 @@ public sealed class ElevationTests
         }
     }
 
+    /// <summary>A slot reserved for a special cell (a required tag that is not the ground tag) stands on a level pad.</summary>
+    [Fact]
+    public void ReservedSlotsAreLevel()
+    {
+        for (ulong seed = 1; seed <= 25; seed++)
+        {
+            LevelPlan plan = Generate(seed, step: 4f);
+            PlannedCell rock = plan.Cells.Single(static c => c.Anchor == new Int3(2, 0, 2));
+            Assert.Equal("rock.tscn", rock.Info.ScenePath);
+            Assert.All(rock.AbsoluteCorners(), h => Assert.Equal(rock.AbsoluteCorners()[0], h));
+        }
+    }
+
+    /// <summary>A corner list of the wrong length is read as flat, and the library says so rather than going quiet.</summary>
+    [Fact]
+    public void AWrongLengthCornerListWarns()
+    {
+        var report = new GenReport();
+        var open = new SocketData { Id = "open" };
+
+        CellTemplate? template = TemplateLibrary.Template(Tile("short.tscn", open, [0, 1, 2]), 1f, "cell_sets[0].cells[0]", report);
+
+        Assert.NotNull(template);
+        Assert.Contains(report.Diagnostics, static d => d.Severity == GenSeverity.Warning && d.Message.Contains("3 corner heights", StringComparison.Ordinal));
+        Assert.All(template.Variants, static v => Assert.All(v.Corners, h => Assert.Equal(0, h)));
+        Assert.DoesNotContain(
+            Diagnostics(Tile("fine.tscn", open, [0, 1, 1, 2])),
+            static d => d.Message.Contains("corner heights", StringComparison.Ordinal));
+    }
+
     /// <summary>The same recipe, seed and depth give the same hills.</summary>
     [Fact]
     public void HillsAreDeterministic() =>
@@ -129,6 +159,13 @@ public sealed class ElevationTests
         Assert.True(result.Plan is null || result.Plan.Cells.All(static c => c.Info.CornerHeights.All(static h => h == 0)));
     }
 
+    private static IReadOnlyList<GenDiagnostic> Diagnostics(CellData cell)
+    {
+        var report = new GenReport();
+        TemplateLibrary.Template(cell, 1f, "cell", report);
+        return report.Diagnostics;
+    }
+
     private static GenContext Context(ulong seed)
     {
         LayoutRegistry layouts = LayoutRegistry.CreateBuiltin();
@@ -146,6 +183,7 @@ public sealed class ElevationTests
         {
             Tile("start.tscn", open, [0, 0, 0, 0], "start"),
             Tile("end.tscn", open, [0, 0, 0, 0], "exit"),
+            Tile("rock.tscn", open, [0, 0, 0, 0], "rock"),
         };
 
         // Every tilt a corner can have against its neighbours: corners 0-2, the lowest at 0.
@@ -171,7 +209,7 @@ public sealed class ElevationTests
         {
             Id = "hills_test",
             LayoutId = BlockId,
-            LayoutSettings = new LayoutSettings(new Dictionary<string, object>(StringComparer.Ordinal) { ["elevation_step"] = step, ["elevation_relief"] = 5, ["elevation_peaks"] = 2 }),
+            LayoutSettings = new LayoutSettings(new Dictionary<string, object>(StringComparer.Ordinal) { ["elevation_step"] = step, ["elevation_relief"] = 5, ["elevation_scale"] = 5 }),
             CellSets = [new CellSetData { Id = "set", Cells = cells }],
             MaxAttempts = 8,
         };
@@ -233,6 +271,8 @@ public sealed class ElevationTests
                     plan.Occupy(new Int3(x, 0, z), SlotRole.Branch);
                 }
             }
+
+            plan.RequireTag(new Int3(2, 0, 2), "rock");
 
             failure = string.Empty;
             return plan;
